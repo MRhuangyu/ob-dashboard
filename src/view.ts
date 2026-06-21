@@ -840,6 +840,20 @@ export class DashboardView extends ItemView implements HoverParent {
 				this.openWeatherConfigModal(colName);
 			} else if (type === 'tracker') {
 				this.openTrackerConfigModal(colName);
+			} else if (type === 'tasks-query') {
+				this.sync.addCard(colName, {
+					title: t('widget.tasksQueryLabel'),
+					type: 'tasks-query',
+					tasksQueryConfig: {
+						query: 'not done\ndue before tomorrow\nsort by due\nsort by priority',
+						limit: 30,
+					},
+				});
+			} else if (type === 'excalidraw') {
+				this.sync.addCard(colName, {
+					title: t('widget.excalidrawLabel'),
+					type: 'excalidraw',
+				});
 			}
 		}, this.plugin.settings.stylePreset);
 		modal.open();

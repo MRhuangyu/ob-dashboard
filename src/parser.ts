@@ -10,12 +10,13 @@ import type {
 	DocNode,
 	WeatherConfig,
 	TrackerConfig,
+	TasksQueryConfig,
 	LibraryConfig,
 } from './types';
 import { parse as parseYaml } from 'yaml';
 import { t } from './i18n';
 
-const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'cols', 'rows', 'gcol', 'grow']);
+const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'query', 'limit', 'cols', 'rows', 'gcol', 'grow']);
 
 // Card colors are persisted without the leading '#' (see serialize) so Obsidian
 // does not register them as tags. Restore the '#' here; legacy '#xxxxxx' values
@@ -170,12 +171,8 @@ export function serialize(data: DashboardData): string {
 				lines.push(`id: ${card.id}`);
 			}
 
-			if (card.type === 'task') {
-				lines.push(`type: task`);
-			}
-
-			if (card.type === 'project') {
-				lines.push(`type: project`);
+			if (card.type !== 'generic' && card.type !== 'note' && card.type !== 'link' && card.type !== 'habit') {
+				lines.push(`type: ${card.type}`);
 			}
 
 			if (card.wikiLink) {
@@ -235,6 +232,11 @@ export function serialize(data: DashboardData): string {
 			const tc = card.trackerConfig;
 			lines.push(`track: ${tc.key}`);
 			lines.push(`days: ${tc.days}`);
+		}
+
+		if (card.tasksQueryConfig) {
+			lines.push(`query: "${escapeYamlString(card.tasksQueryConfig.query)}"`);
+			lines.push(`limit: ${card.tasksQueryConfig.limit}`);
 		}
 
 			if (card.blockquote) {
@@ -790,6 +792,7 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 	const cardType = detectCardType(tasks, blockquote, metadata);
 	const weatherConfig = cardType === 'weather' ? parseWeatherConfig(metadata) : undefined;
 	const trackerConfig = cardType === 'tracker' ? parseTrackerConfig(metadata) : undefined;
+	const tasksQueryConfig = cardType === 'tasks-query' ? parseTasksQueryConfig(metadata, cleanBody) : undefined;
 
 	return {
 		id: metadata.id ?? generateId(block.title, columnName),
@@ -815,6 +818,7 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 		gridRow: parseInt(metadata.grow ?? '0', 10) || 0,
 			weatherConfig,
 			trackerConfig,
+			tasksQueryConfig,
 	};
 }
 
@@ -938,6 +942,8 @@ function detectCardType(
 	if (metadata.type === 'project') return 'project';
 	if (metadata.type === 'weather') return 'weather';
 	if (metadata.type === 'tracker') return 'tracker';
+	if (metadata.type === 'tasks-query') return 'tasks-query';
+	if (metadata.type === 'excalidraw') return 'excalidraw';
 
 	const link = metadata.link ?? '';
 
@@ -948,6 +954,13 @@ function detectCardType(
 	if (link.startsWith('http')) return 'link';
 	if (metadata.progress) return 'project';
 	return 'generic';
+}
+
+function parseTasksQueryConfig(metadata: Record<string, string>, body: string): TasksQueryConfig {
+	return {
+		query: metadata.query ?? (body.trim() || 'not done\ndue before tomorrow'),
+		limit: parseInt(metadata.limit ?? '30', 10) || 30,
+	};
 }
 
 function parseCardSize(raw: string | undefined): CardSize {

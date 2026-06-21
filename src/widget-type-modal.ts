@@ -1,7 +1,7 @@
 import { Modal, setIcon } from 'obsidian';
 import { t } from './i18n';
 
-export type WidgetType = 'weather' | 'tracker';
+export type WidgetType = 'weather' | 'tracker' | 'tasks-query' | 'excalidraw';
 
 export class WidgetTypeModal extends Modal {
 	private onSelect: (type: WidgetType) => void;
@@ -30,6 +30,8 @@ export class WidgetTypeModal extends Modal {
 		const types: { value: WidgetType; icon: string; labelKey: string; descKey: string }[] = [
 			{ value: 'weather', icon: 'cloud-sun', labelKey: 'widget.weatherLabel', descKey: 'widget.weatherDesc' },
 			{ value: 'tracker', icon: 'activity', labelKey: 'widget.trackerLabel', descKey: 'widget.trackerDesc' },
+			{ value: 'tasks-query', icon: 'list-checks', labelKey: 'widget.tasksQueryLabel', descKey: 'widget.tasksQueryDesc' },
+			{ value: 'excalidraw', icon: 'pen-tool', labelKey: 'widget.excalidrawLabel', descKey: 'widget.excalidrawDesc' },
 		];
 
 		for (const wt of types) {

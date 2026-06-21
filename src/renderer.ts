@@ -10,6 +10,7 @@ import { showConfirmDialog } from './confirm-dialog';
 import { attachNoteHover } from './hover-preview';
 import { fetchWeather, getCachedWeather, getWeatherEmoji, getWeatherDescription } from './weather-service';
 import { readTrackerData, readTrackerDataForRange, computeStreak, getPeriodRange } from './tracker-service';
+import { queryVaultTasks } from './tasks-query-service';
 import type { PomodoroService } from './pomodoro-service';
 import type { ReadingService } from './reading-service';
 import { searchBooks, downloadCoverAsBlobUrl } from './book-service';
@@ -2034,7 +2035,9 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	const isTask = card.type === 'task' || sectionType === 'todo';
 	const isWeather = card.type === 'weather';
 	const isTracker = card.type === 'tracker';
-	const isWidget = isWeather || isTracker;
+	const isTasksQuery = card.type === 'tasks-query';
+	const isExcalidraw = card.type === 'excalidraw';
+	const isWidget = isWeather || isTracker || isTasksQuery || isExcalidraw;
 	const isProjectLike = !isMemo && !isTask && !isWidget;
 	const isDashboardSection = sectionType === 'dashboard';
 	const showCover = isProjectLike && !isDashboardSection && sectionType !== 'notes';
@@ -2310,6 +2313,16 @@ function renderCardBody(container: HTMLElement, card: DashboardCard, columnName:
 
 	if (card.type === 'tracker') {
 		renderTrackerBody(container, card, app, settings);
+		return;
+	}
+
+	if (card.type === 'tasks-query') {
+		renderTasksQueryBody(container, card, app);
+		return;
+	}
+
+	if (card.type === 'excalidraw') {
+		renderExcalidrawBody(container, card, app);
 		return;
 	}
 
@@ -2824,6 +2837,8 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 			}
 
 			const resolved = resolveNoteFile(app, doc.path);
+			const icon = docItem.createSpan({ cls: 'dashboard-project-doc-icon' });
+			setIcon(icon, isExcalidrawPath(doc.path) ? 'pen-tool' : 'file-text');
 			docItem.createSpan({ text: resolved?.basename ?? doc.path.split('/').pop() ?? doc.path, cls: 'dashboard-project-doc-name' });
 
 			if (resolved && !Platform.isMobile && activeHoverParent) {
@@ -3444,6 +3459,74 @@ function renderTrackerBody(container: HTMLElement, card: DashboardCard, app: App
 		addStat(t('tracker.min'), minVal);
 		addStat(t('tracker.max'), maxVal);
 	}
+}
+
+function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: App): void {
+	const config = card.tasksQueryConfig ?? {
+		query: card.body.trim() || 'not done\ndue before tomorrow',
+		limit: 30,
+	};
+	const root = container.createDiv({ cls: 'dashboard-tasks-query' });
+	root.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });
+
+	queryVaultTasks(app, config.query, config.limit).then(tasks => {
+		root.empty();
+		if (tasks.length === 0) {
+			root.createDiv({ cls: 'dashboard-tasks-query-empty', text: t('tasksQuery.empty') });
+			return;
+		}
+
+		const list = root.createDiv({ cls: 'dashboard-tasks-query-list' });
+		for (const task of tasks) {
+			const item = list.createDiv({ cls: 'dashboard-tasks-query-item' });
+			item.toggleClass('dashboard-tasks-query-item--done', task.done);
+			const check = item.createSpan({ cls: 'dashboard-tasks-query-check', text: task.done ? '✓' : '□' });
+			check.setAttribute('aria-hidden', 'true');
+			const text = item.createSpan({ cls: 'dashboard-tasks-query-text' });
+			renderTextWithLinks(text, task.text, app);
+			const meta = item.createSpan({ cls: 'dashboard-tasks-query-meta', text: task.path.split('/').pop() ?? task.path });
+			if (task.due) meta.setText(`${meta.getText()} · ${task.due}`);
+			const file = app.vault.getFileByPath(task.path);
+			item.addEventListener('click', () => {
+				if (file) void app.workspace.getLeaf(false).openFile(file, { eState: { line: task.line } });
+			});
+		}
+	}).catch(err => {
+		console.error('[Dashboard] Tasks query failed:', err);
+		root.empty();
+		root.createDiv({ cls: 'dashboard-tasks-query-empty', text: t('tasksQuery.error') });
+	});
+}
+
+function renderExcalidrawBody(container: HTMLElement, card: DashboardCard, app: App): void {
+	const root = container.createDiv({ cls: 'dashboard-excalidraw-card' });
+	const linked = card.docs.find(doc => isExcalidrawPath(doc.path)) ?? (card.wikiLink ? { path: card.wikiLink } : undefined);
+	const file = linked ? app.vault.getFileByPath(linked.path) : null;
+
+	const icon = root.createDiv({ cls: 'dashboard-excalidraw-icon' });
+	setIcon(icon, 'pen-tool');
+
+	if (file) {
+		root.createDiv({ cls: 'dashboard-excalidraw-title', text: file.basename });
+		const openBtn = root.createEl('button', { cls: 'dashboard-excalidraw-open', text: t('excalidraw.open') });
+		openBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			void app.workspace.getLeaf(false).openFile(file);
+		});
+		return;
+	}
+
+	root.createDiv({ cls: 'dashboard-excalidraw-title', text: t('excalidraw.noDrawing') });
+	const createBtn = root.createEl('button', { cls: 'dashboard-excalidraw-open', text: t('excalidraw.create') });
+	createBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(app as any).commands.executeCommandById('obsidian-excalidraw-plugin:excalidraw-autocreate');
+	});
+}
+
+function isExcalidrawPath(path: string): boolean {
+	return path.endsWith('.excalidraw') || path.endsWith('.excalidraw.md') || path.toLowerCase().includes('excalidraw');
 }
 
 function renderTrackerLineChart(el: HTMLElement, data: import('./types').TrackerDataPoint[], size: CardSize, accentColor: string, cardId: string): void {

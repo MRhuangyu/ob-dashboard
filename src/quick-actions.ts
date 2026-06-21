@@ -39,6 +39,14 @@ const COMMON_ICONS: readonly string[] = [
 	'pin', 'megaphone', 'phone',
 ];
 
+const INTEGRATION_COMMAND_PREFIXES = [
+	'quickadd:',
+	'templater-obsidian:',
+	'obsidian-excalidraw-plugin:',
+	'obsidian-tasks-plugin:',
+	'dataview:',
+];
+
 function buildOrderedActions(actions: QuickAction[], order?: string[], hiddenPresets?: string[]): OrderedAction[] {
 	const hidden = new Set(hiddenPresets ?? []);
 	const all: OrderedAction[] = [
@@ -410,7 +418,7 @@ export class AddActionModal extends Modal {
 				if (!q) return true;
 				return entry.name.toLowerCase().includes(q) || entry.id.toLowerCase().includes(q);
 			})
-			.sort((a, b) => a.name.localeCompare(b.name))
+			.sort((a, b) => commandRank(b.id) - commandRank(a.id) || a.name.localeCompare(b.name))
 			.slice(0, 30);
 
 		if (!q) {
@@ -441,6 +449,11 @@ export class AddActionModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 	}
+}
+
+function commandRank(id: string): number {
+	const prefixIndex = INTEGRATION_COMMAND_PREFIXES.findIndex(prefix => id.startsWith(prefix));
+	return prefixIndex === -1 ? 0 : INTEGRATION_COMMAND_PREFIXES.length - prefixIndex;
 }
 
 // Kept for project search modal reuse

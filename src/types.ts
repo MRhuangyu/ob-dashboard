@@ -106,7 +106,7 @@ export interface ColumnDef {
 	color: string;
 }
 
-export type CardType = 'task' | 'note' | 'link' | 'project' | 'habit' | 'generic' | 'weather' | 'tracker';
+export type CardType = 'task' | 'note' | 'link' | 'project' | 'habit' | 'generic' | 'weather' | 'tracker' | 'tasks-query' | 'excalidraw';
 
 export interface WeatherConfig {
 	latitude: number;
@@ -136,6 +136,11 @@ export interface TrackerConfig {
 	key: string;
 	days: number;
 	style: TrackerStyle;
+}
+
+export interface TasksQueryConfig {
+	query: string;
+	limit: number;
 }
 
 export interface TrackerDataPoint {
@@ -190,6 +195,7 @@ export interface DashboardCard {
 	chartConfig?: never;
 	weatherConfig?: WeatherConfig;
 	trackerConfig?: TrackerConfig;
+	tasksQueryConfig?: TasksQueryConfig;
 }
 
 export type LibraryViewMode = 'grid' | 'list' | 'table' | 'kanban';
