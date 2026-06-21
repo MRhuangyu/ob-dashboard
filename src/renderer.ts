@@ -1811,6 +1811,7 @@ export function renderDashboard(
 			{ value: 'todo', label: t('renderer.typeTodo') },
 			{ value: 'memo', label: t('renderer.typeMemo') },
 			{ value: 'notes', label: t('renderer.typeNotesPlain') },
+			{ value: 'dashboard', label: t('renderer.typeDashboard') },
 			{ value: 'library', label: t('renderer.typeLibrary') },
 		];
 
