@@ -2036,11 +2036,14 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	const isWeather = card.type === 'weather';
 	const isTracker = card.type === 'tracker';
 	const isTasksQuery = card.type === 'tasks-query';
+	const isDataview = card.type === 'dataview';
 	const isExcalidraw = card.type === 'excalidraw';
-	const isWidget = isWeather || isTracker || isTasksQuery || isExcalidraw;
+	const isWidget = isWeather || isTracker || isTasksQuery || isDataview || isExcalidraw;
 	const isProjectLike = !isMemo && !isTask && !isWidget;
 	const isDashboardSection = sectionType === 'dashboard';
 	const showCover = isProjectLike && !isDashboardSection && sectionType !== 'notes';
+	let dashboardGridCols = 0;
+	let dashboardGridRows = 0;
 
 	if (showCover) {
 		el.addClass('dashboard-card--cover');
@@ -2127,8 +2130,10 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 			L: { cols: 2, rows: 2 },
 		};
 		const grid = sizeToGrid[currentSize];
-		el.style.gridColumn = `span ${grid.cols}`;
-		el.style.gridRow = `span ${grid.rows}`;
+		dashboardGridCols = card.gridCols && card.gridCols > 0 ? card.gridCols : grid.cols;
+		dashboardGridRows = card.gridRows && card.gridRows > 0 ? card.gridRows : grid.rows;
+		el.style.gridColumn = `span ${dashboardGridCols}`;
+		el.style.gridRow = `span ${dashboardGridRows}`;
 
 		// Size selector button for dashboard widgets only
 		const sizeBtn = actions.createEl('button', {
@@ -2142,6 +2147,8 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 			const nextIdx = (sizes.indexOf(currentSize) + 1) % sizes.length;
 			const nextSize = sizes[nextIdx]!;
 			callbacks.onCardSizeChange(card.id, nextSize);
+			const nextGrid = sizeToGrid[nextSize];
+			callbacks.onCardGridChange(card.id, nextGrid.cols, nextGrid.rows);
 		});
 	}
 
@@ -2261,7 +2268,52 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 
 	// Dashboard grid layout for widget cards (styles only, button already created above)
 	if (isWidget && isDashboardSection) {
-		// grid styles already set above when creating the size button
+		const minCols = 1;
+		const maxCols = 4;
+		const minRows = 1;
+		const maxRows = 6;
+		const cellWidth = 180;
+		const cellHeight = 150;
+		const handle = el.createDiv({ cls: 'dashboard-card-resize-handle dashboard-card-resize-handle--grid' });
+		handle.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const startX = e.clientX;
+			const startY = e.clientY;
+			const startCols = dashboardGridCols || 2;
+			const startRows = dashboardGridRows || 1;
+			el.addClass('dashboard-card--resizing');
+
+			const applyGrid = (cols: number, rows: number) => {
+				el.style.gridColumn = `span ${cols}`;
+				el.style.gridRow = `span ${rows}`;
+			};
+
+			const getGrid = (ev: MouseEvent) => {
+				const cols = Math.max(minCols, Math.min(maxCols, startCols + Math.round((ev.clientX - startX) / cellWidth)));
+				const rows = Math.max(minRows, Math.min(maxRows, startRows + Math.round((ev.clientY - startY) / cellHeight)));
+				return { cols, rows };
+			};
+
+			const onMove = (ev: MouseEvent) => {
+				const next = getGrid(ev);
+				applyGrid(next.cols, next.rows);
+			};
+
+			const onUp = (ev: MouseEvent) => {
+				document.removeEventListener('mousemove', onMove);
+				document.removeEventListener('mouseup', onUp);
+				el.removeClass('dashboard-card--resizing');
+				const next = getGrid(ev);
+				applyGrid(next.cols, next.rows);
+				if (next.cols !== card.gridCols || next.rows !== card.gridRows) {
+					callbacks.onCardGridChange(card.id, next.cols, next.rows);
+				}
+			};
+
+			document.addEventListener('mousemove', onMove);
+			document.addEventListener('mouseup', onUp);
+		});
 	} else if (isMemo || isTask || isProjectLike) {
 		const minW = 200;
 		const maxW = 600;
@@ -2998,7 +3050,7 @@ function getSectionType(column: DashboardColumn): string {
 	if (lower === 'library') return 'library';
 	if (column.cards.length > 0) {
 		const types = new Set(column.cards.map(c => c.type));
-		const dashboardTypes = new Set(['chart', 'weather', 'tracker']);
+		const dashboardTypes = new Set(['chart', 'weather', 'tracker', 'tasks-query', 'dataview', 'excalidraw']);
 		if ([...types].every(t => dashboardTypes.has(t)) && types.size > 0) return 'dashboard';
 		if (types.has('task') && types.size === 1) return 'todo';
 		if (types.has('task') && !types.has('project')) return 'todo';
@@ -3473,18 +3525,26 @@ function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: 
 	};
 	const root = container.createDiv({ cls: 'dashboard-tasks-query' });
 	const toolbar = root.createDiv({ cls: 'dashboard-integration-toolbar' });
-	const editTaskBtn = toolbar.createEl('button', { cls: 'dashboard-integration-btn', text: t('tasksQuery.createOrEdit') });
+	const editTaskBtn = toolbar.createEl('button', {
+		cls: 'dashboard-integration-btn',
+		text: t('tasksQuery.createOrEdit'),
+		attr: { type: 'button' },
+	});
+	editTaskBtn.addEventListener('mousedown', (e) => e.stopPropagation());
 	editTaskBtn.addEventListener('click', (e) => {
+		e.preventDefault();
 		e.stopPropagation();
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(app as any).commands.executeCommandById('obsidian-tasks-plugin:edit-task');
 	});
-	root.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });
+	const content = root.createDiv({ cls: 'dashboard-markdown-render dashboard-tasks-query-content' });
+	content.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });
 	const queryBlock = `\`\`\`tasks\n${config.query}\n\`\`\``;
-	MarkdownRenderer.render(app, queryBlock, root, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
+	content.empty();
+	MarkdownRenderer.render(app, queryBlock, content, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
 		console.error('[Dashboard] Tasks query failed:', err);
-		root.empty();
-		root.createDiv({ cls: 'dashboard-tasks-query-empty', text: t('tasksQuery.error') });
+		content.empty();
+		content.createDiv({ cls: 'dashboard-tasks-query-empty', text: t('tasksQuery.error') });
 	});
 }
 
@@ -3494,11 +3554,13 @@ function renderDataviewBody(container: HTMLElement, card: DashboardCard, app: Ap
 		limit: 50,
 	};
 	const root = container.createDiv({ cls: 'dashboard-dataview-card' });
-	root.createDiv({ cls: 'dashboard-dataview-loading', text: t('dataview.loading') });
+	const content = root.createDiv({ cls: 'dashboard-markdown-render dashboard-dataview-content' });
+	content.createDiv({ cls: 'dashboard-dataview-loading', text: t('dataview.loading') });
 	const queryBlock = `\`\`\`dataview\n${config.query}\n\`\`\``;
-	MarkdownRenderer.render(app, queryBlock, root, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
-		root.empty();
-		root.createDiv({ cls: 'dashboard-dataview-error', text: err instanceof Error ? err.message : String(err) });
+	content.empty();
+	MarkdownRenderer.render(app, queryBlock, content, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
+		content.empty();
+		content.createDiv({ cls: 'dashboard-dataview-error', text: err instanceof Error ? err.message : String(err) });
 	});
 }
 
@@ -3507,22 +3569,41 @@ function renderExcalidrawBody(container: HTMLElement, card: DashboardCard, app: 
 	const linked = card.excalidrawPath ? { path: card.excalidrawPath } : card.docs.find(doc => isExcalidrawPath(doc.path)) ?? (card.wikiLink ? { path: card.wikiLink } : undefined);
 	const file = linked ? app.vault.getFileByPath(linked.path) : null;
 
-	const icon = root.createDiv({ cls: 'dashboard-excalidraw-icon' });
-	setIcon(icon, 'pen-tool');
-
 	if (file) {
-		root.createDiv({ cls: 'dashboard-excalidraw-title', text: file.basename });
-		const openBtn = root.createEl('button', { cls: 'dashboard-excalidraw-open', text: t('excalidraw.open') });
+		const toolbar = root.createDiv({ cls: 'dashboard-integration-toolbar' });
+		const openBtn = toolbar.createEl('button', {
+			cls: 'dashboard-integration-btn dashboard-excalidraw-open',
+			text: t('excalidraw.open'),
+			attr: { type: 'button' },
+		});
+		openBtn.addEventListener('mousedown', (e) => e.stopPropagation());
 		openBtn.addEventListener('click', (e) => {
+			e.preventDefault();
 			e.stopPropagation();
 			void app.workspace.getLeaf(false).openFile(file);
+		});
+		const content = root.createDiv({ cls: 'dashboard-markdown-render dashboard-excalidraw-render' });
+		content.createDiv({ cls: 'dashboard-excalidraw-loading', text: t('dataview.loading') });
+		content.empty();
+		MarkdownRenderer.render(app, `![[${file.path}]]`, content, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
+			console.error('[Dashboard] Excalidraw render failed:', err);
+			content.empty();
+			content.createDiv({ cls: 'dashboard-dataview-error', text: err instanceof Error ? err.message : String(err) });
 		});
 		return;
 	}
 
+	const icon = root.createDiv({ cls: 'dashboard-excalidraw-icon' });
+	setIcon(icon, 'pen-tool');
 	root.createDiv({ cls: 'dashboard-excalidraw-title', text: t('excalidraw.noDrawing') });
-	const createBtn = root.createEl('button', { cls: 'dashboard-excalidraw-open', text: t('excalidraw.create') });
+	const createBtn = root.createEl('button', {
+		cls: 'dashboard-integration-btn dashboard-excalidraw-open',
+		text: t('excalidraw.create'),
+		attr: { type: 'button' },
+	});
+	createBtn.addEventListener('mousedown', (e) => e.stopPropagation());
 	createBtn.addEventListener('click', (e) => {
+		e.preventDefault();
 		e.stopPropagation();
 		const before = new Set(app.vault.getFiles().filter(f => isExcalidrawPath(f.path)).map(f => f.path));
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
