@@ -255,7 +255,7 @@ export class SyncEngine {
 		await this.writeToDisk();
 	}
 
-	async updateCard(cardId: string, updates: Partial<Pick<DashboardCard, 'title' | 'body' | 'dueDate' | 'color' | 'coverImage' | 'width' | 'size' | 'gridCols' | 'gridRows' | 'gridCol' | 'gridRow'>>): Promise<void> {
+	async updateCard(cardId: string, updates: Partial<Pick<DashboardCard, 'title' | 'body' | 'dueDate' | 'color' | 'coverImage' | 'width' | 'size' | 'gridCols' | 'gridRows' | 'gridCol' | 'gridRow' | 'tasksQueryConfig' | 'dataviewConfig' | 'excalidrawPath'>>): Promise<void> {
 		if (!this.data) return;
 
 		this.data = {

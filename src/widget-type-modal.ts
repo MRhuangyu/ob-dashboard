@@ -1,7 +1,7 @@
 import { Modal, setIcon } from 'obsidian';
 import { t } from './i18n';
 
-export type WidgetType = 'weather' | 'tracker' | 'tasks-query' | 'excalidraw';
+export type WidgetType = 'weather' | 'tracker' | 'tasks-query' | 'dataview' | 'excalidraw';
 
 export class WidgetTypeModal extends Modal {
 	private onSelect: (type: WidgetType) => void;
@@ -31,6 +31,7 @@ export class WidgetTypeModal extends Modal {
 			{ value: 'weather', icon: 'cloud-sun', labelKey: 'widget.weatherLabel', descKey: 'widget.weatherDesc' },
 			{ value: 'tracker', icon: 'activity', labelKey: 'widget.trackerLabel', descKey: 'widget.trackerDesc' },
 			{ value: 'tasks-query', icon: 'list-checks', labelKey: 'widget.tasksQueryLabel', descKey: 'widget.tasksQueryDesc' },
+			{ value: 'dataview', icon: 'database', labelKey: 'widget.dataviewLabel', descKey: 'widget.dataviewDesc' },
 			{ value: 'excalidraw', icon: 'pen-tool', labelKey: 'widget.excalidrawLabel', descKey: 'widget.excalidrawDesc' },
 		];
 

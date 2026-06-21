@@ -18,6 +18,7 @@ import { WeatherConfigModal } from './weather-config-modal';
 import { LibraryConfigModal } from './library-config-modal';
 import { TrackerConfigModal } from './tracker-config-modal';
 import { TemplatePickerModal } from './template-modal';
+import { IntegrationConfigModal, type IntegrationUpdates } from './integration-config-modal';
 import { PomodoroService } from './pomodoro-service';
 import { ReadingService } from './reading-service';
 import { ReminderNoticeModal } from './reminder-notice';
@@ -211,6 +212,10 @@ export class DashboardView extends ItemView implements HoverParent {
 		kanban.addEventListener('dashboard-library-config', ((e: CustomEvent) => {
 			const { columnName } = e.detail as { columnName: string };
 			this.openLibraryConfigModal(columnName);
+		}) as EventListener);
+		kanban.addEventListener('dashboard-card-update', ((e: CustomEvent) => {
+			const { cardId, updates } = e.detail as { cardId: string; updates: Partial<DashboardCard> };
+			this.sync.updateCard(cardId, updates);
 		}) as EventListener);
 
 
@@ -819,7 +824,18 @@ export class DashboardView extends ItemView implements HoverParent {
 	}
 
 	private openCardEditModal(card: DashboardCard): void {
+		if (card.type === 'tasks-query' || card.type === 'dataview' || card.type === 'excalidraw') {
+			this.openIntegrationConfigModal(card);
+			return;
+		}
 		const modal = new CardEditModal(this.app, card, (updates) => {
+			this.sync.updateCard(card.id, updates);
+		}, this.plugin.settings.stylePreset);
+		modal.open();
+	}
+
+	private openIntegrationConfigModal(card: DashboardCard): void {
+		const modal = new IntegrationConfigModal(this.app, card, (updates: IntegrationUpdates) => {
 			this.sync.updateCard(card.id, updates);
 		}, this.plugin.settings.stylePreset);
 		modal.open();
@@ -847,6 +863,15 @@ export class DashboardView extends ItemView implements HoverParent {
 					tasksQueryConfig: {
 						query: 'not done\ndue before tomorrow\nsort by due\nsort by priority',
 						limit: 30,
+					},
+				});
+			} else if (type === 'dataview') {
+				this.sync.addCard(colName, {
+					title: t('widget.dataviewLabel'),
+					type: 'dataview',
+					dataviewConfig: {
+						query: 'TABLE file.mtime AS 修改时间\nFROM ""\nSORT file.mtime DESC\nLIMIT 20',
+						limit: 50,
 					},
 				});
 			} else if (type === 'excalidraw') {

@@ -11,12 +11,13 @@ import type {
 	WeatherConfig,
 	TrackerConfig,
 	TasksQueryConfig,
+	DataviewConfig,
 	LibraryConfig,
 } from './types';
 import { parse as parseYaml } from 'yaml';
 import { t } from './i18n';
 
-const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'query', 'limit', 'cols', 'rows', 'gcol', 'grow']);
+const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'query', 'limit', 'drawing', 'cols', 'rows', 'gcol', 'grow']);
 
 // Card colors are persisted without the leading '#' (see serialize) so Obsidian
 // does not register them as tags. Restore the '#' here; legacy '#xxxxxx' values
@@ -237,6 +238,15 @@ export function serialize(data: DashboardData): string {
 		if (card.tasksQueryConfig) {
 			lines.push(`query: "${escapeYamlString(card.tasksQueryConfig.query)}"`);
 			lines.push(`limit: ${card.tasksQueryConfig.limit}`);
+		}
+
+		if (card.dataviewConfig) {
+			lines.push(`query: "${escapeYamlString(card.dataviewConfig.query)}"`);
+			lines.push(`limit: ${card.dataviewConfig.limit}`);
+		}
+
+		if (card.excalidrawPath) {
+			lines.push(`drawing: "[[${escapeYamlString(card.excalidrawPath)}]]"`);
 		}
 
 			if (card.blockquote) {
@@ -695,7 +705,7 @@ function resolveSectionType(
 
 	if (cards.length > 0) {
 		const types = new Set(cards.map(c => c.type));
-		const dashboardTypes = new Set(['weather', 'tracker']);
+		const dashboardTypes = new Set(['weather', 'tracker', 'tasks-query', 'dataview', 'excalidraw']);
 		if ([...types].every(t => dashboardTypes.has(t)) && types.size > 0) return 'dashboard';
 		if (types.has('task') && types.size === 1) return 'todo';
 		if (types.has('task') && !types.has('project')) return 'todo';
@@ -793,6 +803,7 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 	const weatherConfig = cardType === 'weather' ? parseWeatherConfig(metadata) : undefined;
 	const trackerConfig = cardType === 'tracker' ? parseTrackerConfig(metadata) : undefined;
 	const tasksQueryConfig = cardType === 'tasks-query' ? parseTasksQueryConfig(metadata, cleanBody) : undefined;
+	const dataviewConfig = cardType === 'dataview' ? parseDataviewConfig(metadata, cleanBody) : undefined;
 
 	return {
 		id: metadata.id ?? generateId(block.title, columnName),
@@ -819,6 +830,8 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 			weatherConfig,
 			trackerConfig,
 			tasksQueryConfig,
+			dataviewConfig,
+			excalidrawPath: extractDrawing(metadata),
 	};
 }
 
@@ -943,6 +956,7 @@ function detectCardType(
 	if (metadata.type === 'weather') return 'weather';
 	if (metadata.type === 'tracker') return 'tracker';
 	if (metadata.type === 'tasks-query') return 'tasks-query';
+	if (metadata.type === 'dataview') return 'dataview';
 	if (metadata.type === 'excalidraw') return 'excalidraw';
 
 	const link = metadata.link ?? '';
@@ -960,6 +974,13 @@ function parseTasksQueryConfig(metadata: Record<string, string>, body: string): 
 	return {
 		query: metadata.query ?? (body.trim() || 'not done\ndue before tomorrow'),
 		limit: parseInt(metadata.limit ?? '30', 10) || 30,
+	};
+}
+
+function parseDataviewConfig(metadata: Record<string, string>, body: string): DataviewConfig {
+	return {
+		query: metadata.query ?? (body.trim() || 'TABLE file.mtime AS 修改时间\nFROM ""\nSORT file.mtime DESC\nLIMIT 20'),
+		limit: parseInt(metadata.limit ?? '50', 10) || 50,
 	};
 }
 
@@ -994,6 +1015,12 @@ function extractStreak(metadata: Record<string, string>): number {
 
 function extractDue(metadata: Record<string, string>): string {
 	return metadata.due ?? '';
+}
+
+function extractDrawing(metadata: Record<string, string>): string {
+	const raw = metadata.drawing ?? '';
+	const match = raw.match(/^\[\[(.+)]]$/);
+	return match?.[1] ?? raw;
 }
 
 function generateId(title: string, column: string): string {

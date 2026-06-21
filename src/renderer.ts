@@ -1,5 +1,5 @@
-import { App, Platform, setIcon } from 'obsidian';
-import type { HoverParent, TFile } from 'obsidian';
+import { App, Platform, setIcon, TFile } from 'obsidian';
+import type { HoverParent } from 'obsidian';
 import type { DashboardData, DashboardColumn, DashboardCard, RenderCallbacks, TaskItem, DocNode, DashboardSettings, CardSize, TrackerStyle } from './types';
 import { t, getLanguage } from './i18n';
 import { renderLibrarySection } from './library-section';
@@ -11,6 +11,7 @@ import { attachNoteHover } from './hover-preview';
 import { fetchWeather, getCachedWeather, getWeatherEmoji, getWeatherDescription } from './weather-service';
 import { readTrackerData, readTrackerDataForRange, computeStreak, getPeriodRange } from './tracker-service';
 import { queryVaultTasks } from './tasks-query-service';
+import { runDataviewQuery, formatDataviewValue } from './dataview-service';
 import type { PomodoroService } from './pomodoro-service';
 import type { ReadingService } from './reading-service';
 import { searchBooks, downloadCoverAsBlobUrl } from './book-service';
@@ -2078,7 +2079,7 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 
 	const titleEl = header.createEl('h4', { text: card.title, cls: 'dashboard-card-title' });
 
-	const skipEditBtn = isMemo || isTask || (isWidget && isDashboardSection);
+	const skipEditBtn = isMemo || isTask || ((isWeather || isTracker) && isDashboardSection);
 
 	titleEl.addEventListener('dblclick', (e) => {
 		e.stopPropagation();
@@ -2319,6 +2320,11 @@ function renderCardBody(container: HTMLElement, card: DashboardCard, columnName:
 
 	if (card.type === 'tasks-query') {
 		renderTasksQueryBody(container, card, app);
+		return;
+	}
+
+	if (card.type === 'dataview') {
+		renderDataviewBody(container, card, app);
 		return;
 	}
 
@@ -3468,6 +3474,13 @@ function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: 
 		limit: 30,
 	};
 	const root = container.createDiv({ cls: 'dashboard-tasks-query' });
+	const toolbar = root.createDiv({ cls: 'dashboard-integration-toolbar' });
+	const editTaskBtn = toolbar.createEl('button', { cls: 'dashboard-integration-btn', text: t('tasksQuery.createOrEdit') });
+	editTaskBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(app as any).commands.executeCommandById('obsidian-tasks-plugin:edit-task');
+	});
 	root.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });
 
 	queryVaultTasks(app, config.query, config.limit).then(tasks => {
@@ -3499,9 +3512,48 @@ function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: 
 	});
 }
 
+function renderDataviewBody(container: HTMLElement, card: DashboardCard, app: App): void {
+	const config = card.dataviewConfig ?? {
+		query: card.body.trim() || 'TABLE file.mtime AS 修改时间\nFROM ""\nSORT file.mtime DESC\nLIMIT 20',
+		limit: 50,
+	};
+	const root = container.createDiv({ cls: 'dashboard-dataview-card' });
+	root.createDiv({ cls: 'dashboard-dataview-loading', text: t('dataview.loading') });
+
+	runDataviewQuery(app, config.query).then(result => {
+		root.empty();
+		if (result.error) {
+			root.createDiv({ cls: 'dashboard-dataview-error', text: result.error });
+			return;
+		}
+		if (result.type === 'table') {
+			const table = root.createEl('table', { cls: 'dashboard-dataview-table' });
+			const thead = table.createEl('thead');
+			const tr = thead.createEl('tr');
+			for (const header of result.headers) tr.createEl('th', { text: header });
+			const tbody = table.createEl('tbody');
+			for (const row of result.rows.slice(0, config.limit)) {
+				const rowEl = tbody.createEl('tr');
+				for (const cell of row) rowEl.createEl('td', { text: formatDataviewValue(cell) });
+			}
+			return;
+		}
+		const list = root.createDiv({ cls: 'dashboard-dataview-list' });
+		for (const value of result.values.slice(0, config.limit)) {
+			list.createDiv({ cls: 'dashboard-dataview-item', text: formatDataviewValue(value) });
+		}
+		if (list.children.length === 0) {
+			root.createDiv({ cls: 'dashboard-dataview-empty', text: t('dataview.empty') });
+		}
+	}).catch(err => {
+		root.empty();
+		root.createDiv({ cls: 'dashboard-dataview-error', text: err instanceof Error ? err.message : String(err) });
+	});
+}
+
 function renderExcalidrawBody(container: HTMLElement, card: DashboardCard, app: App): void {
 	const root = container.createDiv({ cls: 'dashboard-excalidraw-card' });
-	const linked = card.docs.find(doc => isExcalidrawPath(doc.path)) ?? (card.wikiLink ? { path: card.wikiLink } : undefined);
+	const linked = card.excalidrawPath ? { path: card.excalidrawPath } : card.docs.find(doc => isExcalidrawPath(doc.path)) ?? (card.wikiLink ? { path: card.wikiLink } : undefined);
 	const file = linked ? app.vault.getFileByPath(linked.path) : null;
 
 	const icon = root.createDiv({ cls: 'dashboard-excalidraw-icon' });
@@ -3521,8 +3573,19 @@ function renderExcalidrawBody(container: HTMLElement, card: DashboardCard, app: 
 	const createBtn = root.createEl('button', { cls: 'dashboard-excalidraw-open', text: t('excalidraw.create') });
 	createBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
+		const before = new Set(app.vault.getFiles().filter(f => isExcalidrawPath(f.path)).map(f => f.path));
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(app as any).commands.executeCommandById('obsidian-excalidraw-plugin:excalidraw-autocreate');
+		const ref = app.vault.on('create', (created) => {
+			if (!(created instanceof TFile)) return;
+			if (!isExcalidrawPath(created.path) || before.has(created.path)) return;
+			app.vault.offref(ref);
+			const rootEl = createBtn.closest('.apex-dashboard-root') as HTMLElement | null;
+			rootEl?.dispatchEvent(new CustomEvent('dashboard-card-update', {
+				bubbles: true,
+				detail: { cardId: card.id, updates: { excalidrawPath: created.path, title: created.basename } },
+			}));
+		});
 	});
 }
 

@@ -4979,6 +4979,96 @@
 	user-select: none;
 }
 
+.dashboard-integration-toolbar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.dashboard-integration-btn,
+.dashboard-excalidraw-open {
+	border: 1px solid var(--db-border-card, var(--background-modifier-border));
+	border-radius: var(--db-radius-sm, 6px);
+	background: var(--db-bg-btn, var(--interactive-normal));
+	color: var(--db-text, var(--text-normal));
+	padding: 4px 8px;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.dashboard-tasks-query-list,
+.dashboard-dataview-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.dashboard-tasks-query-item,
+.dashboard-dataview-item {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 6px;
+	align-items: start;
+	padding: 6px;
+	border-radius: var(--db-radius-sm, 6px);
+	background: var(--db-bg-card-hover, var(--background-modifier-hover));
+	cursor: pointer;
+}
+
+.dashboard-tasks-query-item--done .dashboard-tasks-query-text {
+	text-decoration: line-through;
+	opacity: 0.65;
+}
+
+.dashboard-tasks-query-meta {
+	grid-column: 2;
+	color: var(--db-text-muted, var(--text-muted));
+	font-size: 11px;
+}
+
+.dashboard-dataview-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.dashboard-dataview-table th,
+.dashboard-dataview-table td {
+	border-bottom: 1px solid var(--db-border-card, var(--background-modifier-border));
+	padding: 5px 6px;
+	text-align: left;
+	vertical-align: top;
+}
+
+.dashboard-dataview-error,
+.dashboard-dataview-empty,
+.dashboard-tasks-query-empty,
+.dashboard-tasks-query-loading,
+.dashboard-dataview-loading {
+	color: var(--db-text-muted, var(--text-muted));
+	font-size: 12px;
+}
+
+.dashboard-excalidraw-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.dashboard-excalidraw-icon {
+	color: var(--db-accent, var(--interactive-accent));
+}
+
+.dashboard-excalidraw-title {
+	font-weight: 600;
+}
+
+.dashboard-integration-textarea {
+	min-height: 160px;
+	font-family: var(--font-monospace);
+}
+
 /* Todo cards: body uses flex column so task-list scrolls inside */
 .dashboard-section-row[data-section-type="todo"] .dashboard-card-body {
 	flex: 1;
