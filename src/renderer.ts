@@ -1,4 +1,4 @@
-import { App, Platform, setIcon, TFile } from 'obsidian';
+import { App, Component, MarkdownRenderer, Platform, setIcon, TFile } from 'obsidian';
 import type { HoverParent } from 'obsidian';
 import type { DashboardData, DashboardColumn, DashboardCard, RenderCallbacks, TaskItem, DocNode, DashboardSettings, CardSize, TrackerStyle } from './types';
 import { t, getLanguage } from './i18n';
@@ -10,8 +10,6 @@ import { showConfirmDialog } from './confirm-dialog';
 import { attachNoteHover } from './hover-preview';
 import { fetchWeather, getCachedWeather, getWeatherEmoji, getWeatherDescription } from './weather-service';
 import { readTrackerData, readTrackerDataForRange, computeStreak, getPeriodRange } from './tracker-service';
-import { queryVaultTasks } from './tasks-query-service';
-import { runDataviewQuery, formatDataviewValue } from './dataview-service';
 import type { PomodoroService } from './pomodoro-service';
 import type { ReadingService } from './reading-service';
 import { searchBooks, downloadCoverAsBlobUrl } from './book-service';
@@ -3482,30 +3480,8 @@ function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: 
 		(app as any).commands.executeCommandById('obsidian-tasks-plugin:edit-task');
 	});
 	root.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });
-
-	queryVaultTasks(app, config.query, config.limit).then(tasks => {
-		root.empty();
-		if (tasks.length === 0) {
-			root.createDiv({ cls: 'dashboard-tasks-query-empty', text: t('tasksQuery.empty') });
-			return;
-		}
-
-		const list = root.createDiv({ cls: 'dashboard-tasks-query-list' });
-		for (const task of tasks) {
-			const item = list.createDiv({ cls: 'dashboard-tasks-query-item' });
-			item.toggleClass('dashboard-tasks-query-item--done', task.done);
-			const check = item.createSpan({ cls: 'dashboard-tasks-query-check', text: task.done ? '✓' : '□' });
-			check.setAttribute('aria-hidden', 'true');
-			const text = item.createSpan({ cls: 'dashboard-tasks-query-text' });
-			renderTextWithLinks(text, task.text, app);
-			const meta = item.createSpan({ cls: 'dashboard-tasks-query-meta', text: task.path.split('/').pop() ?? task.path });
-			if (task.due) meta.setText(`${meta.getText()} · ${task.due}`);
-			const file = app.vault.getFileByPath(task.path);
-			item.addEventListener('click', () => {
-				if (file) void app.workspace.getLeaf(false).openFile(file, { eState: { line: task.line } });
-			});
-		}
-	}).catch(err => {
+	const queryBlock = `\`\`\`tasks\n${config.query}\n\`\`\``;
+	MarkdownRenderer.render(app, queryBlock, root, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
 		console.error('[Dashboard] Tasks query failed:', err);
 		root.empty();
 		root.createDiv({ cls: 'dashboard-tasks-query-empty', text: t('tasksQuery.error') });
@@ -3519,33 +3495,8 @@ function renderDataviewBody(container: HTMLElement, card: DashboardCard, app: Ap
 	};
 	const root = container.createDiv({ cls: 'dashboard-dataview-card' });
 	root.createDiv({ cls: 'dashboard-dataview-loading', text: t('dataview.loading') });
-
-	runDataviewQuery(app, config.query).then(result => {
-		root.empty();
-		if (result.error) {
-			root.createDiv({ cls: 'dashboard-dataview-error', text: result.error });
-			return;
-		}
-		if (result.type === 'table') {
-			const table = root.createEl('table', { cls: 'dashboard-dataview-table' });
-			const thead = table.createEl('thead');
-			const tr = thead.createEl('tr');
-			for (const header of result.headers) tr.createEl('th', { text: header });
-			const tbody = table.createEl('tbody');
-			for (const row of result.rows.slice(0, config.limit)) {
-				const rowEl = tbody.createEl('tr');
-				for (const cell of row) rowEl.createEl('td', { text: formatDataviewValue(cell) });
-			}
-			return;
-		}
-		const list = root.createDiv({ cls: 'dashboard-dataview-list' });
-		for (const value of result.values.slice(0, config.limit)) {
-			list.createDiv({ cls: 'dashboard-dataview-item', text: formatDataviewValue(value) });
-		}
-		if (list.children.length === 0) {
-			root.createDiv({ cls: 'dashboard-dataview-empty', text: t('dataview.empty') });
-		}
-	}).catch(err => {
+	const queryBlock = `\`\`\`dataview\n${config.query}\n\`\`\``;
+	MarkdownRenderer.render(app, queryBlock, root, 'dashboard.md', activeHoverParent as unknown as Component).catch(err => {
 		root.empty();
 		root.createDiv({ cls: 'dashboard-dataview-error', text: err instanceof Error ? err.message : String(err) });
 	});
