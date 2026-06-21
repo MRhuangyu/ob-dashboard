@@ -23,6 +23,16 @@
 ### ⚡ 快捷操作
 将常用快捷方式固定到侧边栏，支持两种操作类型：**文件**链接可打开任意文档，**命令**快捷方式可触发任意 Obsidian 命令。内置新建日记和新建笔记预设。
 
+### 🌤️ 侧边栏小组件
+左侧边栏提供多种信息小组件，方便快速查看和记录：
+
+- **星期日历** — 紧凑的 7 天日历条，高亮当天日期
+- **天气小组件** — 当前温度、体感温度、湿度、风速和 5 天天气预报，基于 Open-Meteo，无需 API Key
+- **热力图小组件** — 将每日 frontmatter 数据（心情、睡眠、体重等）显示为 GitHub 风格热力图
+- **番茄钟** — 带活动分类和统计的专注计时器
+- **阅读追踪** — 添加书籍、记录阅读时长和页码进度
+- **倒计时** — 自定义目标日期，显示剩余天数或小时数
+
 ### 🎨 Banner（横幅）
 可自定义的横幅区域，支持编辑引言和背景图片（支持本地 Vault 图片和网络图片链接）。双击即可修改。
 
@@ -30,7 +40,18 @@
 在分区之间拖拽卡片来重新组织工作空间，也可以在 Todo 卡片内拖拽任务项进行排序，还支持在 Projects/Notes 卡片之间拖拽文档链接。
 
 ### 🧩 自定义分区
-创建分区时可选择 4 种内置类型 — **Memo**、**Todo**、**Projects**、**Notes** — 每种类型都有独立的布局和行为。自由组合，打造专属工作流。
+创建分区时可选择多种内置类型 — **Memo**、**Todo**、**Projects**、**Notes**、**Library**、**Dashboard** — 每种类型都有独立的布局和行为。自由组合，打造专属工作流。
+
+### 📊 Dashboard 小组件
+Dashboard 分区可以承载更偏“仪表盘”的组件，并以响应式网格布局展示：
+
+- **Weather** — 在主仪表盘区域显示天气和预报卡片
+- **Tracker** — 基于 frontmatter 日常数据的图表卡片
+- **Tasks Query** — 通过 Obsidian Tasks 插件原生渲染 `tasks` 代码块，兼容 Tasks 查询语法和显示效果
+- **Dataview** — 通过 Dataview 插件原生渲染 `dataview` 代码块，支持表格、列表等查询结果
+- **Excalidraw** — 关联并嵌入 Excalidraw 绘图，使用 Obsidian Markdown 原生嵌入渲染
+
+Dashboard 小组件支持调整大小、拖拽排序、分区折叠，并针对 Tasks/Dataview/Excalidraw 这类较重的原生渲染组件优化了拖拽性能。
 
 ### 🕐 最近文档
 侧边栏展示最近编辑的文件及相对时间，快速回到最近的工作。
@@ -68,6 +89,8 @@
 - **样式** — 从 14 款视觉主题中选择
 - **语言** — 支持英文和中文界面
 - **最近文档数量** — 控制侧边栏显示的最近文件数量
+- **侧边栏小组件** — 可分别启用和配置天气、热力图、番茄钟、阅读、倒计时等小组件
+- **阅读设置** — 开关阅读追踪器和阅读完成提示音
 
 ## 安装
 
@@ -81,6 +104,93 @@
 2. 解压到 Vault 的 `.obsidian/plugins/apex-dashboard/` 目录
 3. 打开 设置 > 第三方插件，启用 "Apex Dashboard"
 
+## 开发说明
+
+### 环境要求
+
+- Node.js 18+
+- npm
+- Obsidian 桌面端
+- 一个用于测试的本地 Obsidian 仓库
+
+安装依赖：
+
+```powershell
+npm install
+```
+
+### 修改源码
+
+主要代码位于 `src/`：
+
+- `src/main.ts` — 插件入口、命令注册、设置加载
+- `src/view.ts` — Dashboard 视图生命周期和整体渲染流程
+- `src/renderer.ts` — 分区/卡片渲染、Dashboard 小组件、原生 Markdown 集成
+- `src/dnd.ts` — 卡片拖拽逻辑
+- `src/parser.ts` / `src/sync.ts` — `dashboard.md` 的解析和持久化
+- `styles.css` — 插件界面样式
+- `manifest.json` / `package.json` — 插件元数据和版本号
+
+修改 TypeScript 或 CSS 后，应先构建，再复制到 Obsidian 插件目录测试。
+
+### 编译
+
+```powershell
+npm run build
+```
+
+该命令会执行 TypeScript 类型检查，并用 esbuild 打包插件。构建后的运行文件包括：
+
+- `main.js`
+- `manifest.json`
+- `styles.css`
+
+### 手动打包
+
+手动发布时，只需要打包以下三个文件：
+
+```text
+main.js
+manifest.json
+styles.css
+```
+
+用户将压缩包解压到以下目录即可：
+
+```text
+<vault>/.obsidian/plugins/apex-dashboard/
+```
+
+### 更新到本地 Obsidian 仓库
+
+PowerShell 示例：
+
+```powershell
+$Vault = "D:\自用仓库"
+npm run build
+Copy-Item -LiteralPath main.js,manifest.json,styles.css -Destination "$Vault\.obsidian\plugins\apex-dashboard" -Force
+```
+
+然后重载插件：
+
+```powershell
+obsidian plugin:reload id=apex-dashboard
+```
+
+如果 Obsidian 仍然使用旧的插件代码，请完整退出并重新打开 Obsidian。旧版 Obsidian installer 可能无法通过 CLI reload 稳定刷新插件 JavaScript 和 CSS。
+
+### 版本更新检查清单
+
+准备新版本时：
+
+1. 更新 `package.json`。
+2. 更新 `manifest.json`。
+3. 更新 `versions.json`，加入新版本和最低 Obsidian 版本。
+4. 运行 `npm run build`。
+5. 将 `main.js`、`manifest.json`、`styles.css` 复制到测试仓库。
+6. 重载或重启 Obsidian，并验证 Dashboard。
+7. 提交源码和生成的发布文件。
+
 ## 使用方法
 
 1. 通过左侧功能区图标（主页图标）或命令面板打开：`Apex Dashboard: Open dashboard`
@@ -90,6 +200,15 @@
 > **注意：** 删除、重命名或对分区进行排序，需要在 `dashboard.md` 笔记中进行操作。在笔记中的任何修改，会在工作台界面中直接生效。
 
 ## 更新日志
+
+### 1.1.6
+- **Dashboard 集成小组件** — 为主 Dashboard 分区新增 Tasks Query、Dataview、Excalidraw 卡片
+- **原生 Markdown 渲染** — Tasks、Dataview、Excalidraw 卡片通过 Obsidian Markdown 处理器渲染，使第三方插件输出更接近原生行为
+- **响应式 Dashboard 布局** — Dashboard 卡片改为响应式网格，移除旧的窄宽度限制，并改进重内容卡片的宽高处理
+- **分区折叠修复** — Dashboard 分区在启用网格布局时也能正确折叠
+- **集成卡片尺寸优化** — Tasks、Dataview、Excalidraw 使用更高的默认尺寸，并在内部处理滚动，改善较长内容的查看体验
+- **Excalidraw 关联流程** — 新建 Excalidraw 绘图后可自动关联到 Dashboard 卡片，并以原生嵌入方式显示
+- **拖拽性能优化** — 卡片排序时缓存落点布局，使用 `requestAnimationFrame` 节流拖拽更新，复用落点指示器，并使用轻量拖拽预览，减少原生渲染组件带来的卡顿
 
 ### 1.1.5
 - **链接悬停预览** — 按住 Ctrl/Cmd 并将鼠标悬停在文档链接或 `[[双链]]` 上，即可在不离开仪表盘的情况下查看原生页面预览浮窗。覆盖项目/笔记卡片的文档列表、备忘录与待办里的双链、以及数据库（library）分区
