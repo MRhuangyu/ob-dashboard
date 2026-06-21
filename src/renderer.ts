@@ -2126,12 +2126,15 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 		const currentSize: CardSize = card.size || 'M';
 		const sizeToGrid: Record<CardSize, { cols: number; rows: number }> = {
 			S: { cols: 1, rows: 1 },
-			M: { cols: 2, rows: 1 },
-			L: { cols: 2, rows: 2 },
+			M: { cols: 1, rows: 1 },
+			L: { cols: 2, rows: 1 },
 		};
-		const grid = sizeToGrid[currentSize];
-		dashboardGridCols = card.gridCols && card.gridCols > 0 ? card.gridCols : grid.cols;
-		dashboardGridRows = card.gridRows && card.gridRows > 0 ? card.gridRows : grid.rows;
+		const isIntegrationWidget = isTasksQuery || isDataview || isExcalidraw;
+		const integrationGrid = isIntegrationWidget ? { cols: 1, rows: 2 } : undefined;
+		const grid = integrationGrid ?? sizeToGrid[currentSize];
+		const hasLegacyIntegrationGrid = isIntegrationWidget && card.gridCols === 2 && card.gridRows === 1;
+		dashboardGridCols = !hasLegacyIntegrationGrid && card.gridCols && card.gridCols > 0 ? card.gridCols : grid.cols;
+		dashboardGridRows = !hasLegacyIntegrationGrid && card.gridRows && card.gridRows > 0 ? card.gridRows : grid.rows;
 		el.style.gridColumn = `span ${dashboardGridCols}`;
 		el.style.gridRow = `span ${dashboardGridRows}`;
 
@@ -2269,11 +2272,11 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	// Dashboard grid layout for widget cards (styles only, button already created above)
 	if (isWidget && isDashboardSection) {
 		const minCols = 1;
-		const maxCols = 4;
+		const maxCols = 5;
 		const minRows = 1;
 		const maxRows = 6;
-		const cellWidth = 180;
-		const cellHeight = 150;
+		const cellWidth = 160;
+		const cellHeight = 180;
 		const handle = el.createDiv({ cls: 'dashboard-card-resize-handle dashboard-card-resize-handle--grid' });
 		handle.addEventListener('mousedown', (e) => {
 			e.preventDefault();
