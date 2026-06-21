@@ -5,6 +5,16 @@ interface DnDState {
 	draggingElement: HTMLElement | null;
 	sourceColumn: string | null;
 	dropIndicator: HTMLElement | null;
+	dropIndicatorColumn: HTMLElement | null;
+	dropIndicatorIndex: number;
+	columnLayouts: Map<HTMLElement, ColumnDropLayout>;
+	rafId: number | null;
+	pendingDrop: { column: HTMLElement; clientX: number; clientY: number } | null;
+}
+
+interface ColumnDropLayout {
+	container: HTMLElement;
+	cards: Array<{ el: HTMLElement; rect: DOMRect }>;
 }
 
 export function setupDragAndDrop(
@@ -17,6 +27,11 @@ export function setupDragAndDrop(
 		draggingElement: null,
 		sourceColumn: null,
 		dropIndicator: null,
+		dropIndicatorColumn: null,
+		dropIndicatorIndex: -1,
+		columnLayouts: new Map(),
+		rafId: null,
+		pendingDrop: null,
 	};
 
 	const columns = container.querySelectorAll('.dashboard-section-row');
@@ -35,6 +50,9 @@ export function setupDragAndDrop(
 				state.draggingElement = cardEl;
 				state.sourceColumn = columnName;
 				cardEl.addClass('dashboard-card--dragging');
+				container.addClass('dashboard-dnd-active');
+				buildDropLayouts(state, container);
+				setLightweightDragImage(e, cardEl);
 
 				if (e.dataTransfer) {
 					e.dataTransfer.effectAllowed = 'move';
@@ -44,8 +62,11 @@ export function setupDragAndDrop(
 
 			const onDragEnd = () => {
 				cardEl.removeClass('dashboard-card--dragging');
+				container.removeClass('dashboard-dnd-active');
+				cancelPendingDropUpdate(state);
 				removeDropIndicator(state);
 				clearAllDragOver();
+				state.columnLayouts.clear();
 				state.draggingCardId = null;
 				state.draggingElement = null;
 				state.sourceColumn = null;
@@ -69,7 +90,7 @@ export function setupDragAndDrop(
 				e.dataTransfer.dropEffect = 'move';
 			}
 			colEl.addClass('dashboard-section-row--drag-over');
-			updateDropIndicator(state, colEl, e.clientX, e.clientY);
+			scheduleDropIndicatorUpdate(state, colEl, e.clientX, e.clientY);
 		};
 
 		const onDragLeave = (e: DragEvent) => {
@@ -95,14 +116,11 @@ export function setupDragAndDrop(
 
 			const targetColumn = colEl.dataset.column ?? '';
 
-			if (colEl.dataset.sectionType === 'dashboard' && cardsContainer instanceof HTMLElement) {
-				const targetIndex = getDropIndex(cardsContainer, e.clientX, e.clientY);
-				callbacks.onMoveCard(state.draggingCardId, targetColumn, targetIndex);
-			} else {
-				const targetIndex = getDropIndex(cardsContainer as HTMLElement, e.clientX, e.clientY);
-				callbacks.onMoveCard(state.draggingCardId, targetColumn, targetIndex);
-			}
+			const targetIndex = getDropIndexForColumn(state, colEl, cardsContainer as HTMLElement, e.clientX, e.clientY);
+			callbacks.onMoveCard(state.draggingCardId, targetColumn, targetIndex);
+			cancelPendingDropUpdate(state);
 			removeDropIndicator(state);
+			state.columnLayouts.clear();
 		};
 
 		col.addEventListener('dragover', onDragOver);
@@ -130,28 +148,77 @@ function getDropIndex(container: HTMLElement, clientX: number, clientY: number):
 	return cards.length;
 }
 
-function updateDropIndicator(state: DnDState, column: HTMLElement, clientX: number, clientY: number): void {
-	removeDropIndicator(state);
+function buildDropLayouts(state: DnDState, container: HTMLElement): void {
+	state.columnLayouts.clear();
+	const columns = Array.from(container.querySelectorAll('.dashboard-section-row')) as HTMLElement[];
+	for (const column of columns) {
+		const cardsContainer = column.querySelector('.dashboard-section-cards') as HTMLElement | null;
+		if (!cardsContainer) continue;
+		const cards = Array.from(cardsContainer.querySelectorAll('.dashboard-card:not(.dashboard-card--dragging)')) as HTMLElement[];
+		state.columnLayouts.set(column, {
+			container: cardsContainer,
+			cards: cards.map((el) => ({ el, rect: el.getBoundingClientRect() })),
+		});
+	}
+}
 
-	const cardsContainer = column.querySelector('.dashboard-section-cards');
+function getDropIndexFromLayout(layout: ColumnDropLayout, clientX: number, clientY: number): number {
+	const cards = layout.cards;
+	if (cards.length === 0) return 0;
+
+	for (let i = 0; i < cards.length; i++) {
+		const rect = cards[i]!.rect;
+		if (clientY < rect.top || (clientY < rect.bottom && clientX < rect.left + rect.width / 2)) {
+			return i;
+		}
+	}
+
+	return cards.length;
+}
+
+function getDropIndexForColumn(state: DnDState, column: HTMLElement, cardsContainer: HTMLElement, clientX: number, clientY: number): number {
+	const layout = state.columnLayouts.get(column);
+	return layout ? getDropIndexFromLayout(layout, clientX, clientY) : getDropIndex(cardsContainer, clientX, clientY);
+}
+
+function scheduleDropIndicatorUpdate(state: DnDState, column: HTMLElement, clientX: number, clientY: number): void {
+	state.pendingDrop = { column, clientX, clientY };
+	if (state.rafId !== null) return;
+	state.rafId = requestAnimationFrame(() => {
+		state.rafId = null;
+		const pending = state.pendingDrop;
+		state.pendingDrop = null;
+		if (!pending) return;
+		updateDropIndicator(state, pending.column, pending.clientX, pending.clientY);
+	});
+}
+
+function updateDropIndicator(state: DnDState, column: HTMLElement, clientX: number, clientY: number): void {
+	const layout = state.columnLayouts.get(column);
+	const cardsContainer = layout?.container ?? column.querySelector('.dashboard-section-cards') as HTMLElement | null;
 	if (!cardsContainer) return;
 
-	const cards = Array.from(cardsContainer.querySelectorAll('.dashboard-card:not(.dashboard-card--dragging)')) as HTMLElement[];
-	const indicator = document.createElement('div');
-	indicator.addClass('dashboard-drop-indicator');
-	state.dropIndicator = indicator;
+	const idx = layout ? getDropIndexFromLayout(layout, clientX, clientY) : getDropIndex(cardsContainer, clientX, clientY);
+	const cards = layout?.cards.map((card) => card.el)
+		?? Array.from(cardsContainer.querySelectorAll('.dashboard-card:not(.dashboard-card--dragging)')) as HTMLElement[];
+	const before = idx < cards.length ? cards[idx]! : null;
 
-	if (cards.length === 0) {
-		cardsContainer.appendChild(indicator);
+	if (!state.dropIndicator) {
+		state.dropIndicator = document.createElement('div');
+		state.dropIndicator.addClass('dashboard-drop-indicator');
+	}
+
+	if (state.dropIndicatorColumn === column && state.dropIndicatorIndex === idx && state.dropIndicator.parentElement === cardsContainer) {
 		return;
 	}
 
-	const idx = getDropIndex(cardsContainer as HTMLElement, clientX, clientY);
-	if (idx < cards.length) {
-		cardsContainer.insertBefore(indicator, cards[idx]!);
+	if (before) {
+		cardsContainer.insertBefore(state.dropIndicator, before);
 	} else {
-		cardsContainer.appendChild(indicator);
+		cardsContainer.appendChild(state.dropIndicator);
 	}
+	state.dropIndicatorColumn = column;
+	state.dropIndicatorIndex = idx;
 }
 
 function removeDropIndicator(state: DnDState): void {
@@ -159,12 +226,36 @@ function removeDropIndicator(state: DnDState): void {
 		state.dropIndicator.parentNode.removeChild(state.dropIndicator);
 	}
 	state.dropIndicator = null;
+	state.dropIndicatorColumn = null;
+	state.dropIndicatorIndex = -1;
+}
+
+function cancelPendingDropUpdate(state: DnDState): void {
+	if (state.rafId !== null) {
+		cancelAnimationFrame(state.rafId);
+		state.rafId = null;
+	}
+	state.pendingDrop = null;
 }
 
 function clearAllDragOver(): void {
 	document.querySelectorAll('.dashboard-section-row--drag-over').forEach((el) => {
 		(el as HTMLElement).removeClass('dashboard-section-row--drag-over');
 	});
+}
+
+function setLightweightDragImage(e: DragEvent, cardEl: HTMLElement): void {
+	if (!e.dataTransfer) return;
+	const ghost = document.createElement('div');
+	ghost.className = 'dashboard-drag-image';
+	ghost.textContent = cardEl.querySelector('.dashboard-card-title')?.textContent ?? '';
+	ghost.style.position = 'fixed';
+	ghost.style.top = '-1000px';
+	ghost.style.left = '-1000px';
+	ghost.style.width = `${Math.min(260, Math.max(160, cardEl.offsetWidth))}px`;
+	document.body.appendChild(ghost);
+	e.dataTransfer.setDragImage(ghost, 16, 16);
+	setTimeout(() => ghost.remove(), 0);
 }
 
 function setupTouchDrag(

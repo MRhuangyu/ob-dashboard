@@ -4995,6 +4995,28 @@
 	user-select: none;
 }
 
+.dashboard-dnd-active .dashboard-card:not(.dashboard-card--dragging) .dashboard-markdown-render {
+	pointer-events: none;
+}
+
+.dashboard-dnd-active .dashboard-card--dragging {
+	opacity: 0.35;
+}
+
+.dashboard-drag-image {
+	padding: 8px 12px;
+	border: 1px solid var(--db-border-card, var(--background-modifier-border));
+	border-radius: var(--db-radius-md, 8px);
+	background: var(--db-bg-card, var(--background-secondary));
+	color: var(--db-text, var(--text-normal));
+	box-shadow: var(--db-shadow-card, 0 8px 24px rgba(0, 0, 0, 0.18));
+	font: 600 13px var(--font-interface);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	pointer-events: none;
+}
+
 .dashboard-integration-toolbar {
 	display: flex;
 	gap: 8px;
