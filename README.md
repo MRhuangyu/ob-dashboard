@@ -40,7 +40,18 @@ A customizable banner with an inspirational quote and optional background image.
 Drag cards between sections to reorganize your workspace. Drag task items within Todo cards to reorder. Drag document links between project/note cards.
 
 ### 🧩 Custom Sections
-Create sections with 4 built-in types — **Memo**, **Todo**, **Projects**, and **Notes** — each with its own layout and behavior. Mix and match to fit your workflow.
+Create sections with built-in types — **Memo**, **Todo**, **Projects**, **Notes**, **Library**, and **Dashboard** — each with its own layout and behavior. Mix and match to fit your workflow.
+
+### 📊 Dashboard Widgets
+The Dashboard section can host compact operational widgets in a responsive grid:
+
+- **Weather** — current weather and forecast cards inside the main dashboard area
+- **Tracker** — chart cards for frontmatter-based daily tracking data
+- **Tasks Query** — renders native `tasks` code blocks through the Obsidian Tasks plugin, so query syntax and task rendering stay compatible with Tasks
+- **Dataview** — renders native `dataview` code blocks through the Dataview plugin, including table/list output
+- **Excalidraw** — embeds linked Excalidraw drawings with Obsidian's native Markdown embed rendering
+
+Dashboard widgets support card resizing, drag-and-drop reordering, collapse/expand at the section level, and optimized drag performance for heavier native-rendered widgets.
 
 ### 🕐 Recent Documents
 The sidebar shows recently edited files with relative timestamps, so you can jump back into your latest work.
@@ -93,6 +104,93 @@ All themes support both Obsidian light and dark modes.
 2. Extract into your vault's `.obsidian/plugins/apex-dashboard/` folder
 3. Open Settings > Community Plugins and enable "Apex Dashboard"
 
+## Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+- Obsidian desktop app
+- A local Obsidian vault for testing
+
+Install dependencies:
+
+```powershell
+npm install
+```
+
+### Modify Source Code
+
+Most plugin logic lives in `src/`:
+
+- `src/main.ts` — plugin entry point, commands, settings loading
+- `src/view.ts` — dashboard view lifecycle and rendering orchestration
+- `src/renderer.ts` — section/card rendering, dashboard widgets, native Markdown integrations
+- `src/dnd.ts` — card drag-and-drop behavior
+- `src/parser.ts` / `src/sync.ts` — dashboard markdown parsing and persistence
+- `styles.css` — plugin UI styles
+- `manifest.json` / `package.json` — plugin metadata and version
+
+After changing TypeScript or CSS, run a production build before copying files into Obsidian.
+
+### Compile
+
+```powershell
+npm run build
+```
+
+This runs TypeScript type checking and bundles the plugin with esbuild. The generated runtime files are:
+
+- `main.js`
+- `manifest.json`
+- `styles.css`
+
+### Package Manually
+
+For a manual release package, zip these three files:
+
+```text
+main.js
+manifest.json
+styles.css
+```
+
+Users can extract the zip into:
+
+```text
+<vault>/.obsidian/plugins/apex-dashboard/
+```
+
+### Update a Local Obsidian Vault
+
+PowerShell example:
+
+```powershell
+$Vault = "D:\自用仓库"
+npm run build
+Copy-Item -LiteralPath main.js,manifest.json,styles.css -Destination "$Vault\.obsidian\plugins\apex-dashboard" -Force
+```
+
+Then reload the plugin:
+
+```powershell
+obsidian plugin:reload id=apex-dashboard
+```
+
+If Obsidian keeps using an old bundle, fully quit and reopen Obsidian. Older Obsidian installers may not refresh plugin JavaScript and CSS reliably through CLI reload.
+
+### Version Update Checklist
+
+When preparing a new version:
+
+1. Update `package.json`.
+2. Update `manifest.json`.
+3. Update `versions.json` with the new version and minimum Obsidian version.
+4. Run `npm run build`.
+5. Copy `main.js`, `manifest.json`, and `styles.css` into the test vault.
+6. Reload or restart Obsidian and verify the dashboard.
+7. Commit source changes and generated release files.
+
 ## Usage
 
 1. Open the dashboard via the ribbon icon (home icon) or command palette: `Apex Dashboard: Open dashboard`
@@ -102,6 +200,15 @@ All themes support both Obsidian light and dark modes.
 > **Note:** Deleting, renaming, or reordering sections must be done by editing the `dashboard.md` file directly. Any changes made to the note will take effect in the dashboard view immediately.
 
 ## What's New
+
+### 1.1.6
+- **Dashboard integration widgets** — Added Tasks Query, Dataview, and Excalidraw cards for the main Dashboard section
+- **Native Markdown rendering** — Tasks, Dataview, and Excalidraw cards now render through Obsidian Markdown processors so third-party plugin output stays closer to native behavior
+- **Responsive dashboard layout** — Dashboard cards now use a responsive grid, remove the old narrow max-width constraint, and support improved width/height handling for heavier content
+- **Section collapse fix** — Dashboard sections now collapse correctly even when grid layout rules are active
+- **Integration card sizing** — Tasks, Dataview, and Excalidraw cards use taller default sizing and internal scroll handling for larger plugin output
+- **Excalidraw linking workflow** — Newly created Excalidraw drawings can be associated with dashboard cards and rendered as native embeds
+- **Drag performance optimization** — Card reordering caches drop layouts, throttles dragover updates with `requestAnimationFrame`, reuses the drop indicator, and uses a lightweight drag image for smoother movement with native-rendered widgets
 
 ### 1.1.5
 - **Hover preview for links** — Hold Ctrl/Cmd and hover over any document link or `[[wikilink]]` to see a native page-preview popover without leaving the dashboard. Works across project/note card doc lists, inline wikilinks in memos and todos, and the database (library) section
