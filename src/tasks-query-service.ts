@@ -62,7 +62,7 @@ function parsePriority(text: string): VaultTask['priority'] {
 
 function applyQuery(tasks: VaultTask[], query: string): VaultTask[] {
 	let result = [...tasks];
-	const lines = query.split('\n').map(line => line.trim()).filter(Boolean);
+	const lines = normalizeQueryLines(query);
 
 	for (const line of lines) {
 		const lower = line.toLowerCase();
@@ -85,6 +85,9 @@ function applyQuery(tasks: VaultTask[], query: string): VaultTask[] {
 		} else if (lower.startsWith('filename includes ')) {
 			const needle = line.slice('filename includes '.length).trim().toLowerCase();
 			result = result.filter(task => task.path.split('/').pop()?.toLowerCase().includes(needle));
+		} else if (lower.startsWith('description includes ')) {
+			const needle = line.slice('description includes '.length).trim().toLowerCase();
+			result = result.filter(task => task.text.toLowerCase().includes(needle));
 		} else if (lower.startsWith('tags include ')) {
 			const tag = line.slice('tags include '.length).trim();
 			result = result.filter(task => task.tags.includes(tag));
@@ -108,6 +111,50 @@ function applyQuery(tasks: VaultTask[], query: string): VaultTask[] {
 	}
 
 	return result;
+}
+
+function normalizeQueryLines(query: string): string[] {
+	let cleaned = query.trim();
+	cleaned = cleaned.replace(/^```tasks\s*/i, '');
+	cleaned = cleaned.replace(/\s*```$/i, '');
+	const directLines = cleaned.split('\n').map(line => line.trim()).filter(Boolean);
+	if (directLines.length > 1) return directLines;
+
+	const oneLine = directLines[0] ?? '';
+	const patterns = [
+		/not done/g,
+		/done this week/g,
+		/done today/g,
+		/done/g,
+		/no due date/g,
+		/due before tomorrow/g,
+		/due today/g,
+		/due this week/g,
+		/due before in \d+ days?/g,
+		/scheduled before tomorrow/g,
+		/path includes [^]+?(?=\s(?:not done|done|no due date|due |scheduled |filename |tags |priority |sort |limit )|$)/g,
+		/filename includes [^]+?(?=\s(?:not done|done|no due date|due |scheduled |path |tags |priority |sort |limit )|$)/g,
+		/description includes [^]+?(?=\s(?:not done|done|no due date|due |scheduled |path |filename |tags |priority |sort |limit )|$)/g,
+		/tags include #[\p{L}\p{N}_/-]+/gu,
+		/priority is above medium/g,
+		/priority is (?:highest|high|medium|low|lowest)/g,
+		/sort by due reverse/g,
+		/sort by due/g,
+		/sort by priority/g,
+		/sort by done reverse/g,
+		/limit \d+/g,
+	];
+	const matches: Array<{ index: number; text: string }> = [];
+	for (const pattern of patterns) {
+		for (const match of oneLine.matchAll(pattern)) {
+			if (match.index != null) matches.push({ index: match.index, text: match[0].trim() });
+		}
+	}
+	if (matches.length === 0) return directLines;
+	return matches
+		.sort((a, b) => a.index - b.index)
+		.filter((item, idx, arr) => idx === 0 || item.index !== arr[idx - 1]!.index)
+		.map(item => item.text);
 }
 
 function priorityRank(priority: VaultTask['priority']): number {

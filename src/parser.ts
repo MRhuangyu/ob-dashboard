@@ -856,7 +856,7 @@ function extractCardParts(body: string): {
 
 		const kvMatch = trimmed.match(/^(\w+):\s*(.+)$/);
 		if (kvMatch && kvMatch[1] && kvMatch[2] && KNOWN_METADATA_KEYS.has(kvMatch[1])) {
-			metadata[kvMatch[1]] = kvMatch[2];
+			metadata[kvMatch[1]] = normalizeMetadataValue(kvMatch[2]);
 			currentParent = null;
 			continue;
 		}
@@ -972,14 +972,14 @@ function detectCardType(
 
 function parseTasksQueryConfig(metadata: Record<string, string>, body: string): TasksQueryConfig {
 	return {
-		query: metadata.query ?? (body.trim() || 'not done\ndue before tomorrow'),
+		query: normalizeQueryValue(metadata.query ?? (body.trim() || 'not done\ndue before tomorrow')),
 		limit: parseInt(metadata.limit ?? '30', 10) || 30,
 	};
 }
 
 function parseDataviewConfig(metadata: Record<string, string>, body: string): DataviewConfig {
 	return {
-		query: metadata.query ?? (body.trim() || 'TABLE file.mtime AS 修改时间\nFROM ""\nSORT file.mtime DESC\nLIMIT 20'),
+		query: normalizeQueryValue(metadata.query ?? (body.trim() || 'TABLE file.mtime AS 修改时间\nFROM ""\nSORT file.mtime DESC\nLIMIT 20')),
 		limit: parseInt(metadata.limit ?? '50', 10) || 50,
 	};
 }
@@ -1018,9 +1018,17 @@ function extractDue(metadata: Record<string, string>): string {
 }
 
 function extractDrawing(metadata: Record<string, string>): string {
-	const raw = metadata.drawing ?? '';
+	const raw = normalizeMetadataValue(metadata.drawing ?? '');
 	const match = raw.match(/^\[\[(.+)]]$/);
 	return match?.[1] ?? raw;
+}
+
+function normalizeQueryValue(value: string): string {
+	let out = normalizeMetadataValue(value);
+	out = out.replace(/\\n/g, '\n');
+	out = out.replace(/^```(?:tasks|dataview)?\s*/i, '');
+	out = out.replace(/\s*```$/i, '');
+	return out.trim();
 }
 
 function generateId(title: string, column: string): string {
@@ -1035,7 +1043,7 @@ function generateId(title: string, column: string): string {
 }
 
 function escapeYamlString(str: string): string {
-	return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
+	return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
 function dequote(value: string): string {
@@ -1046,6 +1054,17 @@ function dequote(value: string): string {
 		return value.slice(1, -1);
 	}
 	return value;
+}
+
+function normalizeMetadataValue(value: string): string {
+	let out = value.trim();
+	for (let i = 0; i < 8; i++) {
+		const before = out;
+		out = dequote(out.trim());
+		out = out.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+		if (out === before) break;
+	}
+	return out.trim();
 }
 
 function parseWeatherConfig(metadata: Record<string, string>): WeatherConfig {

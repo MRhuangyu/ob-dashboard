@@ -67,12 +67,22 @@ function normalizeDataviewResult(raw: unknown): DataviewResult {
 export function formatDataviewValue(value: unknown): string {
 	if (value == null) return '';
 	if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+	if (Array.isArray(value)) return value.map(formatDataviewValue).filter(Boolean).join(', ');
 	if (typeof value === 'object') {
 		const rec = value as Record<string, unknown>;
-		if (rec.path) return String(rec.path);
 		if (rec.display) return String(rec.display);
+		if (rec.path) return String(rec.path);
 		if (rec.text) return String(rec.text);
+		if (rec.markdown) return String(rec.markdown);
+		if (rec.toISODate && typeof rec.toISODate === 'function') return String(rec.toISODate());
+		if (rec.toISO && typeof rec.toISO === 'function') return String(rec.toISO());
 		if (rec.value != null) return formatDataviewValue(rec.value);
+		const entries = Object.entries(rec)
+			.filter(([key]) => !key.startsWith('_'))
+			.slice(0, 4)
+			.map(([key, val]) => `${key}: ${formatDataviewValue(val)}`)
+			.filter(part => !part.endsWith(': '));
+		if (entries.length > 0) return entries.join(', ');
 	}
 	return String(value);
 }
