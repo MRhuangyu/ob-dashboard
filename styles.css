@@ -6071,6 +6071,29 @@ select.dashboard-modal-input {
 	padding-bottom: 6px;
 	line-height: 1.4;
 	vertical-align: middle;
+	background-color: var(--background-secondary) !important;
+	color: var(--text-normal) !important;
+	color-scheme: light dark;
+}
+
+select.dashboard-modal-input option,
+select.dashboard-modal-input optgroup {
+	background-color: var(--background-secondary) !important;
+	color: var(--text-normal) !important;
+}
+
+.theme-dark select.dashboard-modal-input,
+.theme-dark select.dashboard-modal-input option,
+.theme-dark select.dashboard-modal-input optgroup {
+	background-color: var(--background-secondary) !important;
+	color: var(--text-normal) !important;
+}
+
+.theme-light select.dashboard-modal-input,
+.theme-light select.dashboard-modal-input option,
+.theme-light select.dashboard-modal-input optgroup {
+	background-color: var(--background-secondary) !important;
+	color: var(--text-normal) !important;
 }
 
 .dashboard-modal-input:focus {
