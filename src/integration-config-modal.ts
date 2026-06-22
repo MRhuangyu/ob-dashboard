@@ -6,6 +6,7 @@ import {
 	DEFAULT_TASKS_QUERY_BUILDER_STATE,
 	type TasksQueryBuilderState,
 	type TasksQueryDue,
+	type TasksQueryGroupBy,
 	type TasksQueryPriority,
 	type TasksQuerySort,
 	type TasksQueryStatus,
@@ -82,6 +83,20 @@ export class IntegrationConfigModal extends Modal {
 			['path', t('tasksQuery.sortPath')],
 			['none', t('tasksQuery.sortNone')],
 		], DEFAULT_TASKS_QUERY_BUILDER_STATE.sort);
+		const groupBy = this.addSelect<TasksQueryGroupBy>(fields, t('tasksQuery.groupByLabel'), [
+			['none', t('tasksQuery.groupByNone')],
+			['heading', t('tasksQuery.groupByHeading')],
+			['filename', t('tasksQuery.groupByFilename')],
+			['folder', t('tasksQuery.groupByFolder')],
+			['due', t('tasksQuery.groupByDue')],
+			['priority', t('tasksQuery.groupByPriority')],
+		], DEFAULT_TASKS_QUERY_BUILDER_STATE.groupBy);
+
+		const displayOptions = builder.createDiv({ cls: 'dashboard-query-builder-options' });
+		const hideSource = this.addCheckbox(displayOptions, t('tasksQuery.hideSource'), DEFAULT_TASKS_QUERY_BUILDER_STATE.hideSource);
+		const hideEditButton = this.addCheckbox(displayOptions, t('tasksQuery.hideEditButton'), DEFAULT_TASKS_QUERY_BUILDER_STATE.hideEditButton);
+		const hideTaskId = this.addCheckbox(displayOptions, t('tasksQuery.hideTaskId'), DEFAULT_TASKS_QUERY_BUILDER_STATE.hideTaskId);
+		const hideDoneDate = this.addCheckbox(displayOptions, t('tasksQuery.hideDoneDate'), DEFAULT_TASKS_QUERY_BUILDER_STATE.hideDoneDate);
 
 		const generateBtn = builder.createEl('button', {
 			cls: 'dashboard-query-builder-generate mod-cta',
@@ -99,6 +114,11 @@ export class IntegrationConfigModal extends Modal {
 				tag: tag.value,
 				priority: priority.value as TasksQueryPriority,
 				sort: sort.value as TasksQuerySort,
+				groupBy: groupBy.value as TasksQueryGroupBy,
+				hideSource: hideSource.checked,
+				hideEditButton: hideEditButton.checked,
+				hideTaskId: hideTaskId.checked,
+				hideDoneDate: hideDoneDate.checked,
 			};
 			query.value = buildTasksQuery(state);
 			query.focus();
@@ -196,6 +216,16 @@ export class IntegrationConfigModal extends Modal {
 			if (optionValue === value) option.selected = true;
 		}
 		return select;
+	}
+
+	private addCheckbox(form: HTMLElement, labelText: string, checked: boolean): HTMLInputElement {
+		const label = form.createEl('label', { cls: 'dashboard-query-builder-checkbox' });
+		const input = label.createEl('input', {
+			attr: { type: 'checkbox' },
+		});
+		input.checked = checked;
+		label.createSpan({ text: labelText });
+		return input;
 	}
 
 	private addTextarea(form: HTMLElement, labelText: string, value: string): HTMLTextAreaElement {

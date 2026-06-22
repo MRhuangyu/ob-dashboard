@@ -2171,7 +2171,9 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 			input.style.height = '0';
 			document.body.appendChild(input);
 			input.addEventListener('input', () => {
-				callbacks.onMemoColorChange(card, input.value);
+				if (!input.value) return;
+				colorBtn.style.color = input.value;
+				el.style.setProperty('--card-accent', input.value);
 			});
 			input.addEventListener('change', () => {
 				if (input.value) {

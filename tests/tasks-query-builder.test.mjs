@@ -11,6 +11,11 @@ test('builds a common unfinished due-soon query', () => {
 		tag: '',
 		priority: 'any',
 		sort: 'due',
+		groupBy: 'none',
+		hideSource: false,
+		hideEditButton: false,
+		hideTaskId: false,
+		hideDoneDate: false,
 	}), [
 		'not done',
 		'due before tomorrow',
@@ -26,6 +31,11 @@ test('builds folder tag priority and path sort filters', () => {
 		tag: '#work',
 		priority: 'high',
 		sort: 'path',
+		groupBy: 'none',
+		hideSource: false,
+		hideEditButton: false,
+		hideTaskId: false,
+		hideDoneDate: false,
 	}), [
 		'done',
 		'due before today',
@@ -44,5 +54,34 @@ test('omits filters set to any or none', () => {
 		tag: '',
 		priority: 'any',
 		sort: 'none',
+		groupBy: 'none',
+		hideSource: false,
+		hideEditButton: false,
+		hideTaskId: false,
+		hideDoneDate: false,
 	}), '');
+});
+
+test('builds display options for compact dashboard task cards', () => {
+	assert.equal(buildTasksQuery({
+		status: 'not-done',
+		due: 'none',
+		folder: '',
+		tag: '',
+		priority: 'any',
+		sort: 'priority',
+		groupBy: 'heading',
+		hideSource: true,
+		hideEditButton: true,
+		hideTaskId: true,
+		hideDoneDate: true,
+	}), [
+		'not done',
+		'sort by priority',
+		'group by heading',
+		'hide backlink',
+		'hide edit button',
+		'hide task id',
+		'hide done date',
+	].join('\n'));
 });

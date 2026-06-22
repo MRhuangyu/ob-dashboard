@@ -2,6 +2,7 @@ export type TasksQueryStatus = 'any' | 'not-done' | 'done';
 export type TasksQueryDue = 'none' | 'today' | 'before-tomorrow' | 'this-week' | 'overdue';
 export type TasksQueryPriority = 'any' | 'high' | 'medium' | 'low';
 export type TasksQuerySort = 'none' | 'due' | 'priority' | 'path';
+export type TasksQueryGroupBy = 'none' | 'heading' | 'filename' | 'folder' | 'due' | 'priority';
 
 export interface TasksQueryBuilderState {
 	status: TasksQueryStatus;
@@ -10,6 +11,11 @@ export interface TasksQueryBuilderState {
 	tag: string;
 	priority: TasksQueryPriority;
 	sort: TasksQuerySort;
+	groupBy: TasksQueryGroupBy;
+	hideSource: boolean;
+	hideEditButton: boolean;
+	hideTaskId: boolean;
+	hideDoneDate: boolean;
 }
 
 export const DEFAULT_TASKS_QUERY_BUILDER_STATE: TasksQueryBuilderState = {
@@ -19,6 +25,11 @@ export const DEFAULT_TASKS_QUERY_BUILDER_STATE: TasksQueryBuilderState = {
 	tag: '',
 	priority: 'any',
 	sort: 'due',
+	groupBy: 'none',
+	hideSource: true,
+	hideEditButton: true,
+	hideTaskId: true,
+	hideDoneDate: false,
 };
 
 export function buildTasksQuery(state: TasksQueryBuilderState): string {
@@ -41,6 +52,11 @@ export function buildTasksQuery(state: TasksQueryBuilderState): string {
 	if (state.priority !== 'any') lines.push(`priority is ${state.priority}`);
 
 	if (state.sort !== 'none') lines.push(`sort by ${state.sort}`);
+	if (state.groupBy !== 'none') lines.push(`group by ${state.groupBy}`);
+	if (state.hideSource) lines.push('hide backlink');
+	if (state.hideEditButton) lines.push('hide edit button');
+	if (state.hideTaskId) lines.push('hide task id');
+	if (state.hideDoneDate) lines.push('hide done date');
 
 	return lines.join('\n');
 }
