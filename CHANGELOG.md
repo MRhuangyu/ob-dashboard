@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.7 (2026-06-23)
+
+### Added
+- Form-based query builders for Tasks Query and Dataview dashboard cards, with raw query editing still available
+- Tasks Query controls for status, due date, folder, tag, priority, grouping, display options, sorting, and native `limit` generation
+- Dataview controls for table/list/task views, source range, fields, `WHERE`, sorting, and `LIMIT` generation
+
+### Improved
+- Dashboard widget default sizing, resize smoothness, and scroll position preservation after resizing
+- Card color picker performance by avoiding repeated writes while dragging
+- Select contrast in dashboard configuration modals across light, dark, and system themes
+
+### Fixed
+- Tasks Query checkbox clipping in rendered task results
+- Removed the in-card Tasks edit button from Tasks Query cards
+
 ## 1.1.5 (2026-06-16)
 
 ### Added

@@ -201,6 +201,13 @@ When preparing a new version:
 
 ## What's New
 
+### 1.1.7
+- **Visual query builders** — Tasks Query and Dataview dashboard cards now include form-based query builders that generate native `tasks` / `dataview` code blocks while still allowing raw query editing
+- **Tasks Query improvements** — Added controls for status, due date, folder, tag, priority, grouping, display options, sorting, and real `limit` generation; removed the in-card task edit button so the card stays focused on querying
+- **Dataview Query improvements** — Added controls for table/list/task views, source range, fields, `WHERE`, sorting, and `LIMIT` generation
+- **Dashboard card resizing fixes** — New dashboard cards get better default width/height, resize more smoothly, and keep the current viewport position after saving size changes
+- **UI polish and performance** — Fixed task result checkbox clipping, improved dark/light select contrast in configuration dialogs, and made card color picking smoother by avoiding repeated dashboard writes while dragging the color picker
+
 ### 1.1.6
 - **Dashboard integration widgets** — Added Tasks Query, Dataview, and Excalidraw cards for the main Dashboard section
 - **Native Markdown rendering** — Tasks, Dataview, and Excalidraw cards now render through Obsidian Markdown processors so third-party plugin output stays closer to native behavior

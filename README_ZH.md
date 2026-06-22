@@ -201,6 +201,13 @@ obsidian plugin:reload id=apex-dashboard
 
 ## 更新日志
 
+### 1.1.7
+- **可视化查询生成器** — Tasks Query 和 Dataview Dashboard 卡片新增表单式查询生成器，可自动生成原生 `tasks` / `dataview` 代码块，同时保留原始查询手动编辑能力
+- **Tasks Query 优化** — 新增状态、到期时间、文件夹、标签、优先级、分组、显示选项、排序和真实 `limit` 生成；移除卡片内“创建 / 编辑任务”按钮，使卡片专注于任务查询
+- **Dataview 查询优化** — 新增表格/列表/任务视图、来源范围、字段、`WHERE`、排序和 `LIMIT` 生成配置
+- **Dashboard 卡片尺寸修复** — 新建 Dashboard 卡片获得更合理的默认宽高，调整尺寸更顺滑，并在保存尺寸后保持当前视口位置
+- **界面与性能优化** — 修复任务查询结果复选框裁切、配置弹窗下拉框在深浅色模式下文字不可见的问题，并优化卡片取色器拖动时的卡顿
+
 ### 1.1.6
 - **Dashboard 集成小组件** — 为主 Dashboard 分区新增 Tasks Query、Dataview、Excalidraw 卡片
 - **原生 Markdown 渲染** — Tasks、Dataview、Excalidraw 卡片通过 Obsidian Markdown 处理器渲染，使第三方插件输出更接近原生行为
