@@ -1,4 +1,4 @@
-import { App, Component, MarkdownRenderer, Notice, Platform, setIcon, TFile } from 'obsidian';
+import { App, Component, MarkdownRenderer, Platform, setIcon, TFile } from 'obsidian';
 import type { HoverParent } from 'obsidian';
 import type { DashboardData, DashboardColumn, DashboardCard, RenderCallbacks, TaskItem, DocNode, DashboardSettings, CardSize, TrackerStyle } from './types';
 import { t, getLanguage } from './i18n';
@@ -3544,28 +3544,6 @@ function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: 
 		limit: 30,
 	};
 	const root = container.createDiv({ cls: 'dashboard-tasks-query' });
-	const toolbar = root.createDiv({ cls: 'dashboard-integration-toolbar' });
-	const editTaskBtn = toolbar.createEl('button', {
-		cls: 'dashboard-integration-btn',
-		text: t('tasksQuery.createOrEdit'),
-		attr: { type: 'button' },
-	});
-	editTaskBtn.setAttribute('draggable', 'false');
-	editTaskBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-	editTaskBtn.addEventListener('mousedown', (e) => e.stopPropagation());
-	editTaskBtn.addEventListener('dragstart', (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-	});
-	editTaskBtn.addEventListener('click', (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const executed = (app as any).commands.executeCommandById('obsidian-tasks-plugin:edit-task');
-		if (!executed) {
-			new Notice(t('tasksQuery.commandUnavailable'));
-		}
-	});
 	const content = root.createDiv({ cls: 'dashboard-markdown-render dashboard-tasks-query-content' });
 	content.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });
 	const queryBlock = `\`\`\`tasks\n${config.query}\n\`\`\``;

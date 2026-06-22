@@ -1,6 +1,15 @@
 import { App, Modal, setIcon, TFile } from 'obsidian';
 import type { DashboardCard, DataviewConfig, TasksQueryConfig } from './types';
 import { t } from './i18n';
+import {
+	buildTasksQuery,
+	DEFAULT_TASKS_QUERY_BUILDER_STATE,
+	type TasksQueryBuilderState,
+	type TasksQueryDue,
+	type TasksQueryPriority,
+	type TasksQuerySort,
+	type TasksQueryStatus,
+} from './tasks-query-builder';
 
 export interface IntegrationUpdates {
 	title?: string;
@@ -43,8 +52,57 @@ export class IntegrationConfigModal extends Modal {
 
 	private renderTasksConfig(form: HTMLElement, titleInput: HTMLInputElement): void {
 		const config = this.card.tasksQueryConfig ?? { query: 'not done\ndue before tomorrow\nsort by due', limit: 30 };
+		const builder = form.createDiv({ cls: 'dashboard-query-builder' });
+		builder.createEl('h3', { cls: 'dashboard-query-builder-title', text: t('tasksQuery.builderTitle') });
+
+		const fields = builder.createDiv({ cls: 'dashboard-query-builder-grid' });
+		const status = this.addSelect<TasksQueryStatus>(fields, t('tasksQuery.statusLabel'), [
+			['not-done', t('tasksQuery.statusNotDone')],
+			['done', t('tasksQuery.statusDone')],
+			['any', t('tasksQuery.statusAny')],
+		], DEFAULT_TASKS_QUERY_BUILDER_STATE.status);
+		const due = this.addSelect<TasksQueryDue>(fields, t('tasksQuery.dueLabel'), [
+			['before-tomorrow', t('tasksQuery.dueBeforeTomorrow')],
+			['today', t('tasksQuery.dueToday')],
+			['this-week', t('tasksQuery.dueThisWeek')],
+			['overdue', t('tasksQuery.dueOverdue')],
+			['none', t('tasksQuery.dueNone')],
+		], DEFAULT_TASKS_QUERY_BUILDER_STATE.due);
+		const folder = this.addInput(fields, t('tasksQuery.folderLabel'), DEFAULT_TASKS_QUERY_BUILDER_STATE.folder);
+		const tag = this.addInput(fields, t('tasksQuery.tagLabel'), DEFAULT_TASKS_QUERY_BUILDER_STATE.tag);
+		const priority = this.addSelect<TasksQueryPriority>(fields, t('tasksQuery.priorityLabel'), [
+			['any', t('tasksQuery.priorityAny')],
+			['high', t('tasksQuery.priorityHigh')],
+			['medium', t('tasksQuery.priorityMedium')],
+			['low', t('tasksQuery.priorityLow')],
+		], DEFAULT_TASKS_QUERY_BUILDER_STATE.priority);
+		const sort = this.addSelect<TasksQuerySort>(fields, t('tasksQuery.sortLabel'), [
+			['due', t('tasksQuery.sortDue')],
+			['priority', t('tasksQuery.sortPriority')],
+			['path', t('tasksQuery.sortPath')],
+			['none', t('tasksQuery.sortNone')],
+		], DEFAULT_TASKS_QUERY_BUILDER_STATE.sort);
+
+		const generateBtn = builder.createEl('button', {
+			cls: 'dashboard-query-builder-generate mod-cta',
+			text: t('tasksQuery.generateQuery'),
+			attr: { type: 'button' },
+		});
+
 		const query = this.addTextarea(form, t('tasksQuery.queryLabel'), config.query);
 		const limit = this.addInput(form, t('tasksQuery.limitLabel'), String(config.limit), 'number');
+		generateBtn.addEventListener('click', () => {
+			const state: TasksQueryBuilderState = {
+				status: status.value as TasksQueryStatus,
+				due: due.value as TasksQueryDue,
+				folder: folder.value,
+				tag: tag.value,
+				priority: priority.value as TasksQueryPriority,
+				sort: sort.value as TasksQuerySort,
+			};
+			query.value = buildTasksQuery(state);
+			query.focus();
+		});
 		this.addActions(form, () => {
 			this.onSave({
 				title: titleInput.value.trim() || this.card.title,
@@ -122,6 +180,22 @@ export class IntegrationConfigModal extends Modal {
 			attr: { type, value },
 		});
 		return input;
+	}
+
+	private addSelect<T extends string>(form: HTMLElement, labelText: string, options: Array<[T, string]>, value: T): HTMLSelectElement {
+		const field = form.createDiv();
+		field.createEl('label', { text: labelText });
+		const select = field.createEl('select', {
+			cls: 'dashboard-modal-input',
+		});
+		for (const [optionValue, label] of options) {
+			const option = select.createEl('option', {
+				text: label,
+				attr: { value: optionValue },
+			});
+			if (optionValue === value) option.selected = true;
+		}
+		return select;
 	}
 
 	private addTextarea(form: HTMLElement, labelText: string, value: string): HTMLTextAreaElement {
