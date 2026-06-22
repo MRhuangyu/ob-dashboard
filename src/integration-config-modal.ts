@@ -2,6 +2,14 @@ import { App, Modal, setIcon, TFile } from 'obsidian';
 import type { DashboardCard, DataviewConfig, TasksQueryConfig } from './types';
 import { t } from './i18n';
 import {
+	buildDataviewQuery,
+	DEFAULT_DATAVIEW_QUERY_BUILDER_STATE,
+	type DataviewQueryBuilderState,
+	type DataviewSortDirection,
+	type DataviewSourceType,
+	type DataviewViewType,
+} from './dataview-query-builder';
+import {
 	buildTasksQuery,
 	DEFAULT_TASKS_QUERY_BUILDER_STATE,
 	type TasksQueryBuilderState,
@@ -137,14 +145,57 @@ export class IntegrationConfigModal extends Modal {
 
 	private renderDataviewConfig(form: HTMLElement, titleInput: HTMLInputElement): void {
 		const config = this.card.dataviewConfig ?? { query: 'TABLE file.mtime AS 修改时间\nFROM ""\nSORT file.mtime DESC\nLIMIT 20', limit: 50 };
+		const builder = form.createDiv({ cls: 'dashboard-query-builder' });
+		builder.createEl('h3', { cls: 'dashboard-query-builder-title', text: t('dataview.builderTitle') });
+
+		const fields = builder.createDiv({ cls: 'dashboard-query-builder-grid' });
+		const viewType = this.addSelect<DataviewViewType>(fields, t('dataview.viewTypeLabel'), [
+			['TABLE', t('dataview.viewTable')],
+			['LIST', t('dataview.viewList')],
+			['TASK', t('dataview.viewTask')],
+		], DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.viewType);
+		const sourceType = this.addSelect<DataviewSourceType>(fields, t('dataview.sourceTypeLabel'), [
+			['vault', t('dataview.sourceVault')],
+			['folder', t('dataview.sourceFolder')],
+			['tag', t('dataview.sourceTag')],
+		], DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.sourceType);
+		const sourceValue = this.addInput(fields, t('dataview.sourceValueLabel'), DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.sourceValue);
+		const fieldsInput = this.addInput(fields, t('dataview.fieldsLabel'), DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.fields);
+		const where = this.addInput(fields, t('dataview.whereLabel'), DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.where);
+		const sortField = this.addInput(fields, t('dataview.sortFieldLabel'), DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.sortField);
+		const sortDirection = this.addSelect<DataviewSortDirection>(fields, t('dataview.sortDirectionLabel'), [
+			['DESC', t('dataview.sortDesc')],
+			['ASC', t('dataview.sortAsc')],
+		], DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.sortDirection);
+		const limit = this.addInput(fields, t('dataview.limitLabel'), String(config.limit || DEFAULT_DATAVIEW_QUERY_BUILDER_STATE.limit), 'number');
+
+		const generateBtn = builder.createEl('button', {
+			cls: 'dashboard-query-builder-generate mod-cta',
+			text: t('dataview.generateQuery'),
+			attr: { type: 'button' },
+		});
+
 		const query = this.addTextarea(form, t('dataview.queryLabel'), config.query);
-		const limit = this.addInput(form, t('dataview.limitLabel'), String(config.limit), 'number');
+		generateBtn.addEventListener('click', () => {
+			const state: DataviewQueryBuilderState = {
+				viewType: viewType.value as DataviewViewType,
+				sourceType: sourceType.value as DataviewSourceType,
+				sourceValue: sourceValue.value,
+				fields: fieldsInput.value,
+				where: where.value,
+				sortField: sortField.value,
+				sortDirection: sortDirection.value as DataviewSortDirection,
+				limit: parseInt(limit.value, 10) || 0,
+			};
+			query.value = buildDataviewQuery(state);
+			query.focus();
+		});
 		this.addActions(form, () => {
 			this.onSave({
 				title: titleInput.value.trim() || this.card.title,
 				dataviewConfig: {
 					query: query.value.trim() || config.query,
-					limit: parseInt(limit.value, 10) || 50,
+					limit: this.extractDataviewLimit(query.value) || parseInt(limit.value, 10) || 50,
 				},
 			});
 		});
@@ -231,6 +282,11 @@ export class IntegrationConfigModal extends Modal {
 
 	private extractLimit(query: string): number {
 		const match = query.match(/(?:^|\n)\s*limit\s+(\d+)\s*(?:\n|$)/i);
+		return match?.[1] ? parseInt(match[1], 10) || 0 : 0;
+	}
+
+	private extractDataviewLimit(query: string): number {
+		const match = query.match(/(?:^|\n)\s*LIMIT\s+(\d+)\s*(?:\n|$)/i);
 		return match?.[1] ? parseInt(match[1], 10) || 0 : 0;
 	}
 
