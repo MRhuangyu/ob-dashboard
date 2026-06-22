@@ -1,4 +1,4 @@
-import { App, Component, MarkdownRenderer, Platform, setIcon, TFile } from 'obsidian';
+import { App, Component, MarkdownRenderer, Notice, Platform, setIcon, TFile } from 'obsidian';
 import type { HoverParent } from 'obsidian';
 import type { DashboardData, DashboardColumn, DashboardCard, RenderCallbacks, TaskItem, DocNode, DashboardSettings, CardSize, TrackerStyle } from './types';
 import { t, getLanguage } from './i18n';
@@ -1904,6 +1904,9 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 	el.dataset.column = column.name;
 	const sectionType = getSectionType(column);
 	el.dataset.sectionType = sectionType;
+	if (sectionType === 'dashboard') {
+		el.dataset.dashboardLayout = 'masonry';
+	}
 
 	const collapsed = getCollapsedSections();
 	if (collapsed.has(column.name)) {
@@ -2135,8 +2138,8 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 		const hasLegacyIntegrationGrid = isIntegrationWidget && card.gridCols === 2 && card.gridRows === 1;
 		dashboardGridCols = !hasLegacyIntegrationGrid && card.gridCols && card.gridCols > 0 ? card.gridCols : grid.cols;
 		dashboardGridRows = !hasLegacyIntegrationGrid && card.gridRows && card.gridRows > 0 ? card.gridRows : grid.rows;
-		el.style.gridColumn = `span ${dashboardGridCols}`;
-		el.style.gridRow = `span ${dashboardGridRows}`;
+		el.dataset.gridCols = String(dashboardGridCols);
+		el.dataset.gridRows = String(dashboardGridRows);
 
 		// Size selector button for dashboard widgets only
 		const sizeBtn = actions.createEl('button', {
@@ -2288,8 +2291,8 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 			el.addClass('dashboard-card--resizing');
 
 			const applyGrid = (cols: number, rows: number) => {
-				el.style.gridColumn = `span ${cols}`;
-				el.style.gridRow = `span ${rows}`;
+				el.dataset.gridCols = String(cols);
+				el.dataset.gridRows = String(rows);
 			};
 
 			const getGrid = (ev: MouseEvent) => {
@@ -3533,12 +3536,21 @@ function renderTasksQueryBody(container: HTMLElement, card: DashboardCard, app: 
 		text: t('tasksQuery.createOrEdit'),
 		attr: { type: 'button' },
 	});
+	editTaskBtn.setAttribute('draggable', 'false');
+	editTaskBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
 	editTaskBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+	editTaskBtn.addEventListener('dragstart', (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+	});
 	editTaskBtn.addEventListener('click', (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(app as any).commands.executeCommandById('obsidian-tasks-plugin:edit-task');
+		const executed = (app as any).commands.executeCommandById('obsidian-tasks-plugin:edit-task');
+		if (!executed) {
+			new Notice(t('tasksQuery.commandUnavailable'));
+		}
 	});
 	const content = root.createDiv({ cls: 'dashboard-markdown-render dashboard-tasks-query-content' });
 	content.createDiv({ cls: 'dashboard-tasks-query-loading', text: t('tasksQuery.loading') });

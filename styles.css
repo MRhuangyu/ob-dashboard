@@ -9254,6 +9254,169 @@
 	overflow: hidden;
 }
 
+/* Dashboard Section: masonry-style dense layout */
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-section-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	grid-auto-rows: 24px;
+	grid-auto-flow: dense;
+	gap: 12px;
+	overflow: visible;
+	min-height: 0;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-section-cards > .dashboard-card {
+	display: flex;
+	width: 100%;
+	min-width: 0;
+	max-width: none;
+	min-height: 0;
+	max-height: min(560px, 72vh);
+	height: 100%;
+	margin: 0;
+	padding: 14px;
+	grid-row: span 8;
+	align-self: stretch;
+	overflow: hidden;
+	cursor: default;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="2"],
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="3"],
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="4"],
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="5"] {
+	grid-column: span 2;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="2"] {
+	grid-row: span 13;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="3"] {
+	grid-row: span 18;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="4"] {
+	grid-row: span 23;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="5"],
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="6"] {
+	grid-row: span 28;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	scrollbar-width: thin;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card-body::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card-body::-webkit-scrollbar-thumb {
+	background: var(--db-border-card, var(--background-modifier-border));
+	border-radius: 999px;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--tasks-query,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--dataview,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--excalidraw {
+	min-height: 300px;
+	grid-row: span 14;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--tasks-query .dashboard-card-body,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--dataview .dashboard-card-body,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--excalidraw .dashboard-card-body {
+	overflow: auto;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-tasks-query,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-dataview-card,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-excalidraw-card {
+	height: auto;
+	min-height: 0;
+	max-height: none;
+	overflow: visible;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-markdown-render {
+	overflow: visible;
+	min-height: 0;
+	max-height: none;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-dataview-content {
+	overflow-x: auto;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-tasks-query-content {
+	overflow: visible;
+	padding: 0 2px 4px;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-integration-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	padding-bottom: 6px;
+	background: var(--db-bg-card, var(--background-secondary));
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-integration-btn {
+	position: relative;
+	z-index: 6;
+	pointer-events: auto;
+	user-select: none;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-tasks-query-content input[type="checkbox"],
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-task-checkbox {
+	position: relative;
+	z-index: 3;
+	flex: 0 0 auto;
+	pointer-events: auto;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-tasks-query-content li,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-task-item {
+	overflow: visible;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-tasks-query-content .contains-task-list,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-tasks-query-content .tasks-list-text {
+	min-width: 0;
+	overflow: visible;
+	white-space: normal;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-dataview-content table,
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-dataview-content .table-view-table {
+	width: max-content;
+	min-width: 100%;
+}
+
+@media (max-width: 700px) {
+	.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-section-cards {
+		grid-template-columns: 1fr;
+	}
+
+	.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-section-cards > .dashboard-card {
+		grid-column: 1 / -1;
+		max-height: min(520px, 76vh);
+	}
+}
+
+@media (max-width: 900px) {
+	.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-section-cards > .dashboard-card {
+		grid-column: 1 / -1;
+	}
+}
+
 /* ===== Template Modal ===== */
 .template-modal-header {
 	display: flex;
