@@ -21,6 +21,7 @@ import {
 	appendDocChild,
 	demoteDocToChild,
 } from './doc-tree';
+import { getDefaultDashboardGrid } from './dashboard-grid';
 
 type DataCallback = (data: DashboardData) => void;
 
@@ -297,6 +298,7 @@ export class SyncEngine {
 		const sectionType = column?.sectionType;
 		const cardTitle = overrides?.title ?? this.getDefaultCardTitle(columnName, sectionType);
 		const cardType = overrides?.type ?? this.getDefaultCardType(columnName, sectionType);
+		const defaultGrid = sectionType === 'dashboard' ? getDefaultDashboardGrid(cardType, overrides?.size ?? 'M') : { cols: 0, rows: 0 };
 
 		const newCard: DashboardCard = {
 			id: `card-${Date.now().toString(36)}`,
@@ -314,10 +316,10 @@ export class SyncEngine {
 			blockquote: '',
 			color: '',
 			coverImage: '',
-				width: 0,
+			width: 0,
 			size: 'M' as const,
-			gridCols: 0,
-			gridRows: 0,
+			gridCols: defaultGrid.cols,
+			gridRows: defaultGrid.rows,
 			gridCol: 0,
 			gridRow: 0,
 			...overrides,

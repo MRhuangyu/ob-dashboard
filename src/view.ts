@@ -58,6 +58,7 @@ export class DashboardView extends ItemView implements HoverParent {
 	private static readonly DAY_ROLLOVER_CHECK_MS = 60 * 1000; // 1 minute
 	private dayRolloverTimer: ReturnType<typeof setInterval> | null = null;
 	private lastRenderedDay = new Date().toDateString();
+	private pendingViewportAnchor: { cardId: string; top: number } | null = null;
 
 	// HoverParent contract: Obsidian assigns/clears this when showing a Page
 	// Preview popover over a dashboard link. Declared so the dashboard can act as
@@ -217,6 +218,10 @@ export class DashboardView extends ItemView implements HoverParent {
 			const { cardId, updates } = e.detail as { cardId: string; updates: Partial<DashboardCard> };
 			this.sync.updateCard(cardId, updates);
 		}) as EventListener);
+		kanban.addEventListener('dashboard-preserve-card-viewport', ((e: CustomEvent) => {
+			const { cardId } = e.detail as { cardId: string };
+			this.captureViewportAnchor(cardId);
+		}) as EventListener);
 
 
 		// Restore scroll positions
@@ -263,7 +268,36 @@ export class DashboardView extends ItemView implements HoverParent {
 			}
 			this.pendingScrollToLastCardOfColumn = null;
 		}
+		this.restoreViewportAnchor(container);
 
+	}
+
+	private captureViewportAnchor(cardId: string): void {
+		const root = this.containerEl.children[1] as HTMLElement | undefined;
+		const cardEl = root?.querySelector(`[data-card-id="${cardId}"]`) as HTMLElement | null;
+		if (!cardEl) return;
+		this.pendingViewportAnchor = {
+			cardId,
+			top: cardEl.getBoundingClientRect().top,
+		};
+	}
+
+	private restoreViewportAnchor(container: HTMLElement): void {
+		const anchor = this.pendingViewportAnchor;
+		if (!anchor) return;
+		this.pendingViewportAnchor = null;
+
+		requestAnimationFrame(() => {
+			const cardEl = container.querySelector(`[data-card-id="${anchor.cardId}"]`) as HTMLElement | null;
+			if (!cardEl) return;
+			const delta = cardEl.getBoundingClientRect().top - anchor.top;
+			if (Math.abs(delta) > 1) {
+				const scrollEl = container.querySelector('.dashboard-kanban') as HTMLElement | null;
+				if (scrollEl) {
+					scrollEl.scrollTop += delta;
+				}
+			}
+		});
 	}
 
 	private renderMobileActions(bannerEl: HTMLElement): void {

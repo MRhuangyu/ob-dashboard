@@ -15,6 +15,7 @@ version-bump.mjs
 
 # Build artifacts
 *.map
+test-dist
 
 # IDE
 .vscode

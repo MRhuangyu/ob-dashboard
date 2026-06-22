@@ -9257,8 +9257,8 @@
 /* Dashboard Section: masonry-style dense layout */
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-section-cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	grid-auto-rows: 24px;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	grid-auto-rows: 32px;
 	grid-auto-flow: dense;
 	gap: 12px;
 	overflow: visible;
@@ -9281,28 +9281,40 @@
 	cursor: default;
 }
 
-.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="2"],
-.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="3"],
-.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="4"],
-.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="5"] {
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="2"] {
 	grid-column: span 2;
 }
 
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="3"] {
+	grid-column: span 3;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="4"] {
+	grid-column: span 4;
+}
+
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-cols="5"] {
+	grid-column: span 5;
+}
+
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="2"] {
-	grid-row: span 13;
+	grid-row: span 8;
 }
 
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="3"] {
-	grid-row: span 18;
+	grid-row: span 12;
 }
 
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="4"] {
-	grid-row: span 23;
+	grid-row: span 16;
 }
 
-.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="5"],
+.dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="5"] {
+	grid-row: span 20;
+}
+
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card[data-grid-rows="6"] {
-	grid-row: span 28;
+	grid-row: span 24;
 }
 
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card-body {
@@ -9325,8 +9337,7 @@
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--tasks-query,
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--dataview,
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--excalidraw {
-	min-height: 300px;
-	grid-row: span 14;
+	min-height: 0;
 }
 
 .dashboard-section-row[data-section-type="dashboard"][data-dashboard-layout="masonry"] .dashboard-card--tasks-query .dashboard-card-body,

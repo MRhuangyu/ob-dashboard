@@ -18,6 +18,7 @@ import { renderSidebarLunarWidget } from './lunar-widget';
 import type { HolidayInfo } from './holiday-service';
 import { CountdownSettingsModal } from './countdown-modal';
 import { Chart, LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
+import { clampDashboardGrid, getDefaultDashboardGrid, getEffectiveDashboardGrid } from './dashboard-grid';
 
 Chart.register(LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip);
 
@@ -2127,17 +2128,9 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	// Dashboard grid layout for widget cards
 	if (isWidget && isDashboardSection) {
 		const currentSize: CardSize = card.size || 'M';
-		const sizeToGrid: Record<CardSize, { cols: number; rows: number }> = {
-			S: { cols: 1, rows: 1 },
-			M: { cols: 1, rows: 1 },
-			L: { cols: 2, rows: 1 },
-		};
-		const isIntegrationWidget = isTasksQuery || isDataview || isExcalidraw;
-		const integrationGrid = isIntegrationWidget ? { cols: 1, rows: 2 } : undefined;
-		const grid = integrationGrid ?? sizeToGrid[currentSize];
-		const hasLegacyIntegrationGrid = isIntegrationWidget && card.gridCols === 2 && card.gridRows === 1;
-		dashboardGridCols = !hasLegacyIntegrationGrid && card.gridCols && card.gridCols > 0 ? card.gridCols : grid.cols;
-		dashboardGridRows = !hasLegacyIntegrationGrid && card.gridRows && card.gridRows > 0 ? card.gridRows : grid.rows;
+		const grid = getEffectiveDashboardGrid(card.type, currentSize, card.gridCols, card.gridRows);
+		dashboardGridCols = grid.cols;
+		dashboardGridRows = grid.rows;
 		el.dataset.gridCols = String(dashboardGridCols);
 		el.dataset.gridRows = String(dashboardGridRows);
 
@@ -2153,7 +2146,7 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 			const nextIdx = (sizes.indexOf(currentSize) + 1) % sizes.length;
 			const nextSize = sizes[nextIdx]!;
 			callbacks.onCardSizeChange(card.id, nextSize);
-			const nextGrid = sizeToGrid[nextSize];
+			const nextGrid = getDefaultDashboardGrid(card.type, nextSize);
 			callbacks.onCardGridChange(card.id, nextGrid.cols, nextGrid.rows);
 		});
 	}
@@ -2274,20 +2267,19 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 
 	// Dashboard grid layout for widget cards (styles only, button already created above)
 	if (isWidget && isDashboardSection) {
-		const minCols = 1;
-		const maxCols = 5;
-		const minRows = 1;
-		const maxRows = 6;
-		const cellWidth = 160;
-		const cellHeight = 180;
+		const cellWidth = 140;
+		const cellHeight = 96;
 		const handle = el.createDiv({ cls: 'dashboard-card-resize-handle dashboard-card-resize-handle--grid' });
 		handle.addEventListener('mousedown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			const startX = e.clientX;
 			const startY = e.clientY;
-			const startCols = dashboardGridCols || 2;
+			const startCols = dashboardGridCols || 1;
 			const startRows = dashboardGridRows || 1;
+			let current = { cols: startCols, rows: startRows };
+			let pending: { cols: number; rows: number } | null = null;
+			let rafId: number | null = null;
 			el.addClass('dashboard-card--resizing');
 
 			const applyGrid = (cols: number, rows: number) => {
@@ -2295,24 +2287,46 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 				el.dataset.gridRows = String(rows);
 			};
 
+			const scheduleGrid = (cols: number, rows: number) => {
+				pending = { cols, rows };
+				if (rafId !== null) return;
+				rafId = requestAnimationFrame(() => {
+					rafId = null;
+					if (!pending) return;
+					current = pending;
+					pending = null;
+					applyGrid(current.cols, current.rows);
+				});
+			};
+
 			const getGrid = (ev: MouseEvent) => {
-				const cols = Math.max(minCols, Math.min(maxCols, startCols + Math.round((ev.clientX - startX) / cellWidth)));
-				const rows = Math.max(minRows, Math.min(maxRows, startRows + Math.round((ev.clientY - startY) / cellHeight)));
-				return { cols, rows };
+				return clampDashboardGrid(
+					startCols + Math.round((ev.clientX - startX) / cellWidth),
+					startRows + Math.round((ev.clientY - startY) / cellHeight),
+				);
 			};
 
 			const onMove = (ev: MouseEvent) => {
 				const next = getGrid(ev);
-				applyGrid(next.cols, next.rows);
+				if (next.cols === current.cols && next.rows === current.rows) return;
+				scheduleGrid(next.cols, next.rows);
 			};
 
 			const onUp = (ev: MouseEvent) => {
 				document.removeEventListener('mousemove', onMove);
 				document.removeEventListener('mouseup', onUp);
+				if (rafId !== null) {
+					cancelAnimationFrame(rafId);
+					rafId = null;
+				}
 				el.removeClass('dashboard-card--resizing');
 				const next = getGrid(ev);
 				applyGrid(next.cols, next.rows);
 				if (next.cols !== card.gridCols || next.rows !== card.gridRows) {
+					el.dispatchEvent(new CustomEvent('dashboard-preserve-card-viewport', {
+						bubbles: true,
+						detail: { cardId: card.id },
+					}));
 					callbacks.onCardGridChange(card.id, next.cols, next.rows);
 				}
 			};
