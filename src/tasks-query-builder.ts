@@ -16,6 +16,7 @@ export interface TasksQueryBuilderState {
 	hideEditButton: boolean;
 	hideTaskId: boolean;
 	hideDoneDate: boolean;
+	limit: number;
 }
 
 export const DEFAULT_TASKS_QUERY_BUILDER_STATE: TasksQueryBuilderState = {
@@ -30,6 +31,7 @@ export const DEFAULT_TASKS_QUERY_BUILDER_STATE: TasksQueryBuilderState = {
 	hideEditButton: true,
 	hideTaskId: true,
 	hideDoneDate: false,
+	limit: 30,
 };
 
 export function buildTasksQuery(state: TasksQueryBuilderState): string {
@@ -57,6 +59,7 @@ export function buildTasksQuery(state: TasksQueryBuilderState): string {
 	if (state.hideEditButton) lines.push('hide edit button');
 	if (state.hideTaskId) lines.push('hide task id');
 	if (state.hideDoneDate) lines.push('hide done date');
+	if (state.limit > 0) lines.push(`limit ${Math.floor(state.limit)}`);
 
 	return lines.join('\n');
 }

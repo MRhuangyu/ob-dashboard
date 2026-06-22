@@ -16,6 +16,7 @@ test('builds a common unfinished due-soon query', () => {
 		hideEditButton: false,
 		hideTaskId: false,
 		hideDoneDate: false,
+		limit: 0,
 	}), [
 		'not done',
 		'due before tomorrow',
@@ -36,6 +37,7 @@ test('builds folder tag priority and path sort filters', () => {
 		hideEditButton: false,
 		hideTaskId: false,
 		hideDoneDate: false,
+		limit: 0,
 	}), [
 		'done',
 		'due before today',
@@ -59,6 +61,7 @@ test('omits filters set to any or none', () => {
 		hideEditButton: false,
 		hideTaskId: false,
 		hideDoneDate: false,
+		limit: 0,
 	}), '');
 });
 
@@ -75,6 +78,7 @@ test('builds display options for compact dashboard task cards', () => {
 		hideEditButton: true,
 		hideTaskId: true,
 		hideDoneDate: true,
+		limit: 12,
 	}), [
 		'not done',
 		'sort by priority',
@@ -83,5 +87,6 @@ test('builds display options for compact dashboard task cards', () => {
 		'hide edit button',
 		'hide task id',
 		'hide done date',
+		'limit 12',
 	].join('\n'));
 });

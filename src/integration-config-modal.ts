@@ -91,6 +91,7 @@ export class IntegrationConfigModal extends Modal {
 			['due', t('tasksQuery.groupByDue')],
 			['priority', t('tasksQuery.groupByPriority')],
 		], DEFAULT_TASKS_QUERY_BUILDER_STATE.groupBy);
+		const limit = this.addInput(fields, t('tasksQuery.limitLabel'), String(config.limit || DEFAULT_TASKS_QUERY_BUILDER_STATE.limit), 'number');
 
 		const displayOptions = builder.createDiv({ cls: 'dashboard-query-builder-options' });
 		const hideSource = this.addCheckbox(displayOptions, t('tasksQuery.hideSource'), DEFAULT_TASKS_QUERY_BUILDER_STATE.hideSource);
@@ -105,7 +106,6 @@ export class IntegrationConfigModal extends Modal {
 		});
 
 		const query = this.addTextarea(form, t('tasksQuery.queryLabel'), config.query);
-		const limit = this.addInput(form, t('tasksQuery.limitLabel'), String(config.limit), 'number');
 		generateBtn.addEventListener('click', () => {
 			const state: TasksQueryBuilderState = {
 				status: status.value as TasksQueryStatus,
@@ -119,6 +119,7 @@ export class IntegrationConfigModal extends Modal {
 				hideEditButton: hideEditButton.checked,
 				hideTaskId: hideTaskId.checked,
 				hideDoneDate: hideDoneDate.checked,
+				limit: parseInt(limit.value, 10) || 0,
 			};
 			query.value = buildTasksQuery(state);
 			query.focus();
@@ -128,7 +129,7 @@ export class IntegrationConfigModal extends Modal {
 				title: titleInput.value.trim() || this.card.title,
 				tasksQueryConfig: {
 					query: query.value.trim() || config.query,
-					limit: parseInt(limit.value, 10) || 30,
+					limit: this.extractLimit(query.value) || parseInt(limit.value, 10) || 30,
 				},
 			});
 		});
@@ -226,6 +227,11 @@ export class IntegrationConfigModal extends Modal {
 		input.checked = checked;
 		label.createSpan({ text: labelText });
 		return input;
+	}
+
+	private extractLimit(query: string): number {
+		const match = query.match(/(?:^|\n)\s*limit\s+(\d+)\s*(?:\n|$)/i);
+		return match?.[1] ? parseInt(match[1], 10) || 0 : 0;
 	}
 
 	private addTextarea(form: HTMLElement, labelText: string, value: string): HTMLTextAreaElement {
